@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/history_entry.dart';
 
@@ -31,8 +32,22 @@ class ReadmeResult {
 
 /// Service that calls the FastAPI backend endpoints.
 class ApiService {
-  /// Base URL of the running FastAPI server. Change this for production.
-  static const String _baseUrl = 'http://localhost:8000';
+  /// Base URL of the running FastAPI server.
+  /// On production (GitHub Pages), points to the Render deployment.
+  /// On local development, points to localhost:8000.
+  static String get _baseUrl {
+    if (kIsWeb) {
+      // If running on GitHub Pages (or any non-localhost web host),
+      // use the Render backend URL.
+      final host = Uri.base.host;
+      if (host == 'localhost' || host == '127.0.0.1') {
+        return 'http://localhost:8000';
+      }
+      return 'https://readmearchitect.onrender.com';
+    }
+    // Native mobile — use localhost (for dev) or change for production.
+    return 'http://localhost:8000';
+  }
 
   /// Generate a README by sending the [githubUrl] and [presentationMode]
   /// to the backend.
