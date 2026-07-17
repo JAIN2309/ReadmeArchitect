@@ -23,6 +23,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 
 ## 📑 Table of Contents
 - [✨ Features](#-features)
+- [📸 App Screenshots](#-app-screenshots)
 - [🛠 Tech Stack](#-tech-stack)
 - [📂 Project Structure](#-project-structure)
 - [🚀 Getting Started](#-getting-started)
@@ -94,6 +95,23 @@ A **production-grade AI documentation engine** connecting developers with automa
 
 ---
 
+## 📸 App Screenshots
+
+### 🖥️ Desktop / Web Dashboard
+<p align="center">
+  <img src="readme_assets/desktop_onboarding.png" width="49%" alt="Desktop Onboarding"/>
+  <img src="readme_assets/desktop_dashboard_filled.png" width="49%" alt="Desktop Dashboard View"/>
+</p>
+
+### 📱 Mobile UI Layout
+<p align="center">
+  <img src="readme_assets/mobile_onboarding.png" width="32%" alt="Mobile Onboarding"/>
+  <img src="readme_assets/mobile_dashboard_empty.png" width="32%" alt="Mobile Dashboard Empty"/>
+  <img src="readme_assets/mobile_dashboard_filled.png" width="32%" alt="Mobile Dashboard View"/>
+</p>
+
+---
+
 ## 🛠 Tech Stack
 
 <details open>
@@ -133,6 +151,7 @@ readme_architect/
 ├── 📄 README.md                   # This file
 ├── 📄 ROADMAP.md                  # Setup & run guide with troubleshooting
 ├── 📄 LICENSE                     # MIT License
+├── 📁 readme_assets/              # Screenshots and visual branding assets
 │
 ├── 📁 backend/
 │   ├── main.py                    # FastAPI server, Gemini client, GitHub Scraper, History API

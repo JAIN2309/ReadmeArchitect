@@ -195,6 +195,55 @@ Same desktop layout as Chrome — the platform detector identifies both.
 
 ---
 
+## 🌐 Step 5 — Production Deployment (Render + GitHub Pages)
+
+This project is set up to run with the frontend hosted on **GitHub Pages** and the backend API running on **Render**.
+
+### 5.1 Deploy Backend API to Render (Free)
+1. Sign up or log in at **[render.com](https://render.com/)** using your GitHub account.
+2. Click **New +** (top right) -> **Web Service**.
+3. Under **Connect a repository**, select your `ReadmeArchitect` repository.
+4. Render will read the [`render.yaml`](backend/render.yaml) blueprint automatically.
+5. In the **Environment Variables** configuration, add:
+   - **Key:** `GEMINI_API_KEY`
+   - **Value:** *Your actual Gemini API key from Google AI Studio*
+6. Click **Create Web Service**. 
+7. Once Render builds and starts the service, copy the live URL shown at the top of your Render dashboard (e.g., `https://readme-architect-api-xxxx.onrender.com`).
+
+### 5.2 Update API Base URL in Code (If URL is unique)
+If Render generates a unique URL that doesn't match `https://readmearchitect.onrender.com`:
+1. Open [`api_service.dart`](frontend/lib/services/api_service.dart).
+2. Locate the `_baseUrl` getter (around line 34) and change the fallback URL to match your exact Render live URL:
+   ```dart
+   return 'https://your-custom-render-url.onrender.com';
+   ```
+3. Rebuild the frontend web assets and push the update:
+   ```bash
+   # Rebuild frontend web assets
+   cd frontend
+   flutter build web --base-href "/ReadmeArchitect/"
+
+   # Checkout gh-pages to deploy
+   cd ..
+   git checkout gh-pages
+   git rm -rf .
+   Copy-Item -Path "frontend/build/web/*" -Destination "." -Recurse -Force
+   git add -A
+   git commit -m "deploy: update API URL to match Render instance"
+   git push origin gh-pages
+   git checkout main
+   ```
+
+### 5.3 Deploy Frontend to GitHub Pages
+1. Go to your repository on **GitHub**.
+2. Navigate to **Settings** -> **Pages** (under the Code and automation section).
+3. Under **Build and deployment**:
+   - **Source:** Select `Deploy from a branch`
+   - **Branch:** Select `gh-pages` and `/ (root)`
+4. Click **Save**. Within 1–2 minutes, your frontend will be live at `https://your-username.github.io/ReadmeArchitect/`.
+
+---
+
 ## 📁 Architecture Summary
 
 ```
