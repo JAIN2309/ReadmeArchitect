@@ -17,6 +17,12 @@ A **production-grade AI documentation engine** connecting developers with automa
 ![Linear Design](https://img.shields.io/badge/UI/UX-Linear_Inspired-5E5CE6?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)
 
+<br/>
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/⚡_Live_Demo-Online-5E5CE6?style=for-the-badge&logo=github&logoColor=white)](https://jain2309.github.io/ReadmeArchitect/)
+[![API Backend](https://img.shields.io/badge/🤖_API_Backend-Active-brightgreen?style=for-the-badge&logo=fastapi&logoColor=white)](https://readmearchitect.onrender.com/health)
+
 </div>
 
 ---
