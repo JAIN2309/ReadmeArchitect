@@ -29,6 +29,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 - [🧠 AI Architecture](#-ai-architecture)
 - [🔌 API Endpoints](#-api-endpoints)
 - [⭐ Presentation Modes](#-presentation-modes)
+- [🧪 Testing](#-testing)
 
 ---
 
@@ -131,6 +132,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 readme_architect/
 ├── 📄 README.md                   # This file
 ├── 📄 ROADMAP.md                  # Setup & run guide with troubleshooting
+├── 📄 LICENSE                     # MIT License
 │
 ├── 📁 backend/
 │   ├── main.py                    # FastAPI server, Gemini client, GitHub Scraper, History API
@@ -275,6 +277,35 @@ curl -X POST http://localhost:8000/api/auto-readme \
 | **Basic** | Small utility scripts | Minimalist H3 headers, direct copy-paste install commands, short sentences. |
 | **Advanced** | Hackathons / Portfolios | Adds Features list, directory tree visualization, detailed tech stack, API references. |
 | **Professional** | Enterprise / Open Source | Injects Shields.io badges, Markdown tables, contributing guidelines, license blocks, and logo placeholders. |
+
+---
+
+## 🧪 Testing
+
+### Frontend (Flutter)
+The project includes a smoke test that verifies the app renders correctly without crashing:
+
+```bash
+cd frontend
+flutter test
+```
+
+**Test file:** [`widget_test.dart`](frontend/test/widget_test.dart)  
+**What it tests:** Verifies the `ReadmeArchitectApp` widget mounts and the splash screen renders both the title ("README Architect") and subtitle ("AI-Powered Documentation Generator").
+
+### Backend (FastAPI)
+The backend can be tested interactively via the auto-generated **Swagger UI**:
+
+```bash
+# Start the server
+cd backend
+uvicorn main:app --reload --port 8000
+
+# Open in browser
+# → http://localhost:8000/docs
+```
+
+From Swagger, you can test all endpoints directly — click **Try it out** on any endpoint, fill in the parameters, and execute.
 
 ---
 
