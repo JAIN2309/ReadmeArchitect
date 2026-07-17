@@ -27,18 +27,24 @@ class PlatformDetector {
       return AppPlatform.mobileNative;
     }
 
-    // Running on the web — inspect the browser user-agent string.
+    // Running on the web — check user agent and screen size
     final userAgent = html.window.navigator.userAgent.toLowerCase();
+    
+    final isMobileDevice = userAgent.contains('mobile') ||
+        userAgent.contains('android') ||
+        userAgent.contains('iphone') ||
+        userAgent.contains('ipad') ||
+        userAgent.contains('ipod');
 
-    final isChrome = userAgent.contains('chrome') && !userAgent.contains('edg');
-    final isEdge = userAgent.contains('edg');
+    final screenWidth = html.window.screen?.width ?? 1024;
+    final isSmallScreen = screenWidth < 768;
 
-    if (isChrome || isEdge) {
-      return AppPlatform.desktopWeb;
+    if (isMobileDevice || isSmallScreen) {
+      // Route web mobile users to the mobile-optimized screen
+      return AppPlatform.mobileNative;
     }
 
-    // Fallback: unknown browser → still use the desktop layout since we are
-    // on the web and likely have a wide viewport.
+    // Default to desktop split-pane layout for laptops and desktops
     return AppPlatform.desktopWeb;
   }
 }
