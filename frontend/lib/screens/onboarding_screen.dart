@@ -32,13 +32,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       description: 'Choose Basic for simple tools, Advanced for portfolios, or Professional for enterprise-grade docs with badges and setup guides.',
     ),
     _OnboardingStep(
-      icon: Icons.preview,
-      title: '3. Live Generation & Preview',
-      description: 'Watch the AI instantly architect a picture-perfect README based on real codebase insights.',
+      icon: Icons.edit_note,
+      title: '3. Live Generation & Editing',
+      description: 'Watch the AI instantly architect your README, then live-edit the raw markdown in our split-pane editor to perfect it.',
+    ),
+    _OnboardingStep(
+      icon: Icons.merge_type,
+      title: '4. Direct GitHub PRs',
+      description: 'Add your Personal Access Token in Settings and instantly push your polished README directly to your repository as a Pull Request!',
     ),
     _OnboardingStep(
       icon: Icons.inventory_2,
-      title: '4. Export & History',
+      title: '5. Export & History',
       description: 'Copy to clipboard, download as a .md file, or swipe into the history panel to revisit past generations.',
     ),
   ];
