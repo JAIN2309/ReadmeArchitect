@@ -56,16 +56,22 @@ class ApiService {
   static Future<ReadmeResult> generateReadme({
     required String githubUrl,
     required String presentationMode,
+    String? githubToken,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/auto-readme');
+
+    final bodyData = <String, dynamic>{
+      'github_url': githubUrl,
+      'presentation_mode': presentationMode,
+    };
+    if (githubToken != null && githubToken.isNotEmpty) {
+      bodyData['github_token'] = githubToken;
+    }
 
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'github_url': githubUrl,
-        'presentation_mode': presentationMode,
-      }),
+      body: jsonEncode(bodyData),
     );
 
     if (response.statusCode == 200) {
@@ -109,6 +115,31 @@ class ApiService {
     final response = await http.delete(uri);
 
     if (response.statusCode != 200) {
+      throw Exception(_extractError(response));
+    }
+  }
+
+  /// Create a Pull Request via the FastAPI backend.
+  static Future<String> createPullRequest({
+    required String githubUrl,
+    required String githubToken,
+    required String markdown,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/create-pr');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'github_url': githubUrl,
+        'github_token': githubToken,
+        'markdown': markdown,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['pr_url'] as String;
+    } else {
       throw Exception(_extractError(response));
     }
   }

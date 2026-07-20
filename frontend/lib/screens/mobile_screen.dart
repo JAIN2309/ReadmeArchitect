@@ -7,6 +7,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/history_entry.dart';
 import '../services/api_service.dart';
 import '../services/export_service.dart';
@@ -26,6 +28,10 @@ class _MobileScreenState extends State<MobileScreen>
   final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
   final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
   int _selectedModeIndex = 0;
+  String _githubToken = '';
+
+  final TextEditingController _markdownController = TextEditingController();
+  bool _isPreview = true;
 
   bool _isLoading = false;
   String _generatedMarkdown = '';
@@ -38,15 +44,24 @@ class _MobileScreenState extends State<MobileScreen>
   @override
   void initState() {
     super.initState();
+    _loadToken();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
   }
 
+  Future<void> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _githubToken = prefs.getString('github_token') ?? '';
+    });
+  }
+
   @override
   void dispose() {
     _urlController.dispose();
+    _markdownController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -68,9 +83,12 @@ class _MobileScreenState extends State<MobileScreen>
       final result = await ApiService.generateReadme(
         githubUrl: url,
         presentationMode: _modes[_selectedModeIndex],
+        githubToken: _githubToken,
       );
       setState(() {
         _generatedMarkdown = result.markdown;
+        _markdownController.text = result.markdown;
+        _isPreview = true;
         _repoOwner = result.repoOwner;
         _repoName = result.repoName;
       });
@@ -110,6 +128,8 @@ class _MobileScreenState extends State<MobileScreen>
     setState(() {
       _urlController.text = entry.githubUrl;
       _generatedMarkdown = entry.markdown;
+      _markdownController.text = entry.markdown;
+      _isPreview = true;
       _repoOwner = entry.repoOwner;
       _repoName = entry.repoName;
       _errorMessage = null;
@@ -127,6 +147,79 @@ class _MobileScreenState extends State<MobileScreen>
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  void _showSettingsDialog() {
+    final TextEditingController tokenController = TextEditingController(text: _githubToken);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A20),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: tokenController,
+          obscureText: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: 'GitHub Personal Access Token',
+            labelStyle: TextStyle(color: Colors.white.withAlpha(150)),
+            hintText: 'ghp_...',
+            hintStyle: TextStyle(color: Colors.white.withAlpha(50)),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withAlpha(20)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF5E5CE6)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withAlpha(150))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5E5CE6)),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('github_token', tokenController.text.trim());
+              setState(() {
+                _githubToken = tokenController.text.trim();
+              });
+              if (mounted) Navigator.pop(context);
+              _showSnack('Settings saved');
+            },
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createPullRequest() async {
+    if (_generatedMarkdown.isEmpty) return;
+    if (_githubToken.isEmpty) {
+      _showSnack('Please set a GitHub Token in settings first');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final prUrl = await ApiService.createPullRequest(
+        githubUrl: _urlController.text,
+        githubToken: _githubToken,
+        markdown: _generatedMarkdown,
+      );
+      _showSnack('PR Created Successfully!');
+      final uri = Uri.parse(prUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Failed to create PR: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -155,11 +248,21 @@ class _MobileScreenState extends State<MobileScreen>
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, size: 20),
+            tooltip: 'Settings (GitHub Token)',
+            onPressed: _showSettingsDialog,
+          ),
           if (hasOutput) ...[
             IconButton(
               icon: const Icon(Icons.copy, size: 20),
               tooltip: 'Copy markdown',
               onPressed: _copyToClipboard,
+            ),
+            IconButton(
+              icon: const Icon(Icons.merge_type, size: 20),
+              tooltip: 'Push to GitHub (Create PR)',
+              onPressed: _createPullRequest,
             ),
             IconButton(
               icon: const Icon(Icons.download, size: 20),
@@ -326,6 +429,32 @@ class _MobileScreenState extends State<MobileScreen>
               const SizedBox(height: 18),
 
               // ── Output Area ──
+              if (hasOutput)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => setState(() => _isPreview = false),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: !_isPreview ? const Color(0xFF6C63FF) : const Color(0xFF1A1A36),
+                          elevation: 0,
+                        ),
+                        child: Text('Edit Raw', style: TextStyle(color: !_isPreview ? Colors.white : Colors.white.withAlpha(150))),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () => setState(() => _isPreview = true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isPreview ? const Color(0xFF6C63FF) : const Color(0xFF1A1A36),
+                          elevation: 0,
+                        ),
+                        child: Text('Preview', style: TextStyle(color: _isPreview ? Colors.white : Colors.white.withAlpha(150))),
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
@@ -363,73 +492,94 @@ class _MobileScreenState extends State<MobileScreen>
                         )
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: Markdown(
-                            data: _generatedMarkdown,
-                            padding: const EdgeInsets.all(16),
-                            styleSheet: MarkdownStyleSheet.fromTheme(
-                              Theme.of(context),
-                            ).copyWith(
-                              p: TextStyle(
-                                color: Colors.white.withAlpha(200),
-                                fontSize: 14.5,
-                                height: 1.6,
-                                letterSpacing: 0.2,
-                              ),
-                              h1: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.5,
-                              ),
-                              h2: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: -0.3,
-                              ),
-                              h3: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              code: TextStyle(
-                                backgroundColor: Colors.white.withAlpha(12),
-                                color: const Color(0xFFA5B4FC),
-                                fontSize: 13,
-                                fontFamily: 'monospace',
-                              ),
-                              codeblockDecoration: BoxDecoration(
-                                color: const Color(0xFF141417),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white.withAlpha(12)),
-                              ),
-                              listBullet: TextStyle(
-                                color: Colors.white.withAlpha(150),
-                                fontSize: 14,
-                              ),
-                              blockquoteDecoration: BoxDecoration(
-                                color: Colors.transparent,
-                                border: Border(
-                                  left: BorderSide(
-                                    color: Colors.white.withAlpha(30),
-                                    width: 3,
+                          child: _isPreview 
+                              ? Markdown(
+                                  data: _generatedMarkdown,
+                                  padding: const EdgeInsets.all(16),
+                                  styleSheet: MarkdownStyleSheet.fromTheme(
+                                    Theme.of(context),
+                                  ).copyWith(
+                                    p: TextStyle(
+                                      color: Colors.white.withAlpha(200),
+                                      fontSize: 14.5,
+                                      height: 1.6,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    h1: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: -0.5,
+                                    ),
+                                    h2: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: -0.3,
+                                    ),
+                                    h3: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    code: TextStyle(
+                                      backgroundColor: Colors.white.withAlpha(12),
+                                      color: const Color(0xFFA5B4FC),
+                                      fontSize: 13,
+                                      fontFamily: 'monospace',
+                                    ),
+                                    codeblockDecoration: BoxDecoration(
+                                      color: const Color(0xFF141417),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: Colors.white.withAlpha(12)),
+                                    ),
+                                    listBullet: TextStyle(
+                                      color: Colors.white.withAlpha(150),
+                                      fontSize: 14,
+                                    ),
+                                    blockquoteDecoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: Colors.white.withAlpha(30),
+                                          width: 3,
+                                        ),
+                                      ),
+                                    ),
+                                    blockquote: TextStyle(
+                                      color: Colors.white.withAlpha(150),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    horizontalRuleDecoration: BoxDecoration(
+                                      border: Border(
+                                        top: BorderSide(
+                                          color: Colors.white.withAlpha(12),
+                                          width: 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : TextField(
+                                  controller: _markdownController,
+                                  maxLines: null,
+                                  expands: true,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _generatedMarkdown = val;
+                                    });
+                                  },
+                                  style: const TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 13,
+                                    height: 1.5,
+                                    color: Color(0xFFB0B0D0),
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.all(16),
                                   ),
                                 ),
-                              ),
-                              blockquote: TextStyle(
-                                color: Colors.white.withAlpha(150),
-                                fontStyle: FontStyle.italic,
-                              ),
-                              horizontalRuleDecoration: BoxDecoration(
-                                border: Border(
-                                  top: BorderSide(
-                                    color: Colors.white.withAlpha(12),
-                                    width: 1,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
                         ),
                 ),
               ),

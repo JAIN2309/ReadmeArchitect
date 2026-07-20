@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -61,6 +62,7 @@ PresentationMode = Literal["Basic", "Advanced", "Professional"]
 class ReadmeRequest(BaseModel):
     github_url: str
     presentation_mode: PresentationMode
+    github_token: str | None = None
 
     @field_validator("github_url")
     @classmethod
@@ -78,6 +80,14 @@ class ReadmeResponse(BaseModel):
     repo_owner: str
     repo_name: str
     presentation_mode: PresentationMode
+
+class PRRequest(BaseModel):
+    github_url: str
+    github_token: str
+    markdown: str
+
+class PRResponse(BaseModel):
+    pr_url: str
 
 
 class HistoryEntry(BaseModel):
@@ -108,10 +118,13 @@ IMPORTANT_FILES_REGEX = re.compile(
     re.IGNORECASE
 )
 
-async def _fetch_file_content(client: httpx.AsyncClient, owner: str, repo: str, branch: str, path: str) -> str:
+async def _fetch_file_content(client: httpx.AsyncClient, owner: str, repo: str, branch: str, path: str, token: str | None = None) -> str:
     """Fetch raw file content from GitHub and truncate to avoid token limits."""
     url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}"
-    resp = await client.get(url)
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    resp = await client.get(url, headers=headers)
     if resp.status_code == 200:
         return resp.text[:10000] # max 10k chars per file
     return ""
@@ -125,7 +138,7 @@ def _parse_owner_repo(github_url: str) -> tuple[str, str]:
     return parts[1], parts[2]
 
 
-async def scrape_repo_structure(github_url: str) -> tuple[str, str, str]:
+async def scrape_repo_structure(github_url: str, token: str | None = None) -> tuple[str, str, str]:
     """
     Fetch the recursive file tree of a public GitHub repo via the Trees API.
 
@@ -137,11 +150,15 @@ async def scrape_repo_structure(github_url: str) -> tuple[str, str, str]:
     # Step 1 — resolve the default branch SHA via the repo endpoint.
     repo_api = f"https://api.github.com/repos/{owner}/{repo}"
     tree_string = ""
+    
+    req_headers = {"Accept": "application/vnd.github.v3+json"}
+    if token:
+        req_headers["Authorization"] = f"Bearer {token}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         repo_resp = await client.get(
             repo_api,
-            headers={"Accept": "application/vnd.github.v3+json"},
+            headers=req_headers,
         )
 
         if repo_resp.status_code != 200:
@@ -163,7 +180,7 @@ async def scrape_repo_structure(github_url: str) -> tuple[str, str, str]:
         )
         tree_resp = await client.get(
             tree_api,
-            headers={"Accept": "application/vnd.github.v3+json"},
+            headers=req_headers,
         )
 
         if tree_resp.status_code == 200:
@@ -183,7 +200,7 @@ async def scrape_repo_structure(github_url: str) -> tuple[str, str, str]:
             important_paths = important_paths[:5]
             file_blocks = []
             for path in important_paths:
-                content = await _fetch_file_content(client, owner, repo, default_branch, path)
+                content = await _fetch_file_content(client, owner, repo, default_branch, path, token)
                 if content:
                     file_blocks.append(f"\n--- FILE: {path} ---\n```\n{content}\n```\n")
             
@@ -285,7 +302,9 @@ async def generate_readme(request: ReadmeRequest):
 
     # 1 — Scrape repository structure.
     try:
-        owner, repo_name, repo_tree = await scrape_repo_structure(request.github_url)
+        owner, repo_name, repo_tree = await scrape_repo_structure(
+            request.github_url, token=request.github_token
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=400,
@@ -361,11 +380,108 @@ async def get_history():
 async def delete_history_entry(entry_id: int):
     """Delete a single history entry by ID."""
     global _history
-    before = len(_history)
-    _history = [e for e in _history if e.id != entry_id]
-    if len(_history) == before:
+    idx = next((i for i, e in enumerate(_history) if e.id == entry_id), None)
+    if idx is None:
         raise HTTPException(status_code=404, detail="History entry not found")
-    return {"status": "deleted", "id": entry_id}
+    return _history.pop(idx)
+
+
+# ---------------------------------------------------------------------------
+# POST /api/create-pr
+# ---------------------------------------------------------------------------
+
+@app.post("/api/create-pr", response_model=PRResponse)
+async def create_pr(request: PRRequest):
+    """Creates a new branch and opens a PR with the generated README.md"""
+    owner, repo = _parse_owner_repo(request.github_url)
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": f"Bearer {request.github_token}",
+        "X-GitHub-Api-Version": "2022-11-28"
+    }
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # 1. Get default branch SHA
+        repo_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo}", headers=headers)
+        if repo_resp.status_code != 200:
+            raise HTTPException(400, "Failed to access repo. Is token valid?")
+        
+        default_branch = repo_resp.json().get("default_branch", "main")
+        
+        ref_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo}/git/ref/heads/{default_branch}", headers=headers)
+        if ref_resp.status_code != 200:
+            raise HTTPException(400, "Failed to get branch SHA")
+        base_sha = ref_resp.json()["object"]["sha"]
+        
+        # 2. Create new branch
+        new_branch_name = f"readme-architect-update-{int(time.time())}"
+        create_ref_resp = await client.post(
+            f"https://api.github.com/repos/{owner}/{repo}/git/refs",
+            headers=headers,
+            json={"ref": f"refs/heads/{new_branch_name}", "sha": base_sha}
+        )
+        if create_ref_resp.status_code != 201:
+            raise HTTPException(400, f"Failed to create branch: {create_ref_resp.text}")
+        
+        # 3. Get current tree SHA
+        commit_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo}/git/commits/{base_sha}", headers=headers)
+        tree_sha = commit_resp.json()["tree"]["sha"]
+        
+        # 4. Create new tree with README.md
+        tree_data = {
+            "base_tree": tree_sha,
+            "tree": [
+                {
+                    "path": "README.md",
+                    "mode": "100644",
+                    "type": "blob",
+                    "content": request.markdown
+                }
+            ]
+        }
+        create_tree_resp = await client.post(
+            f"https://api.github.com/repos/{owner}/{repo}/git/trees",
+            headers=headers,
+            json=tree_data
+        )
+        new_tree_sha = create_tree_resp.json()["sha"]
+        
+        # 5. Create commit
+        commit_data = {
+            "message": "docs: Update README.md via ReadmeArchitect",
+            "tree": new_tree_sha,
+            "parents": [base_sha]
+        }
+        create_commit_resp = await client.post(
+            f"https://api.github.com/repos/{owner}/{repo}/git/commits",
+            headers=headers,
+            json=commit_data
+        )
+        new_commit_sha = create_commit_resp.json()["sha"]
+        
+        # 6. Update ref
+        await client.patch(
+            f"https://api.github.com/repos/{owner}/{repo}/git/refs/heads/{new_branch_name}",
+            headers=headers,
+            json={"sha": new_commit_sha}
+        )
+        
+        # 7. Create PR
+        pr_data = {
+            "title": "docs: Update README.md",
+            "body": "This PR automatically updates the `README.md` file using [ReadmeArchitect](https://github.com/JAIN2309/ReadmeArchitect).\n\n*Review the changes and merge if they look good!*",
+            "head": new_branch_name,
+            "base": default_branch
+        }
+        pr_resp = await client.post(
+            f"https://api.github.com/repos/{owner}/{repo}/pulls",
+            headers=headers,
+            json=pr_data
+        )
+        if pr_resp.status_code != 201:
+            raise HTTPException(400, f"Failed to create PR: {pr_resp.text}")
+            
+        return {"pr_url": pr_resp.json()["html_url"]}
 
 
 @app.delete("/api/history")

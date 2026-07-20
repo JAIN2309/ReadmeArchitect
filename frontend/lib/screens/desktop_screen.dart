@@ -9,6 +9,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/history_entry.dart';
 import '../services/api_service.dart';
 import '../services/export_service.dart';
@@ -24,9 +26,11 @@ class DesktopScreen extends StatefulWidget {
 class _DesktopScreenState extends State<DesktopScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _urlController = TextEditingController();
+  final TextEditingController _markdownController = TextEditingController();
   final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
   final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
   int _selectedModeIndex = 0;
+  String _githubToken = '';
 
   bool _isLoading = false;
   bool _historyOpen = false;
@@ -41,15 +45,24 @@ class _DesktopScreenState extends State<DesktopScreen>
   @override
   void initState() {
     super.initState();
+    _loadToken();
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
   }
 
+  Future<void> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _githubToken = prefs.getString('github_token') ?? '';
+    });
+  }
+
   @override
   void dispose() {
     _urlController.dispose();
+    _markdownController.dispose();
     _shimmerController.dispose();
     super.dispose();
   }
@@ -72,9 +85,11 @@ class _DesktopScreenState extends State<DesktopScreen>
       final result = await ApiService.generateReadme(
         githubUrl: url,
         presentationMode: _modes[_selectedModeIndex],
+        githubToken: _githubToken,
       );
       setState(() {
         _generatedMarkdown = result.markdown;
+        _markdownController.text = result.markdown;
         _repoOwner = result.repoOwner;
         _repoName = result.repoName;
         _repoLabel = '${result.repoOwner}/${result.repoName}';
@@ -101,11 +116,81 @@ class _DesktopScreenState extends State<DesktopScreen>
       repoOwner: _repoOwner,
       repoName: _repoName,
     );
-    if (success) {
-      _showSnack('Download started');
-    } else {
-      ExportService.copyToClipboard(_generatedMarkdown);
-      _showSnack('File download is web-only. Copied to clipboard instead.');
+    if (!success) {
+      _showSnack('Downloading files is not supported on this platform');
+    }
+  }
+
+  void _showSettingsDialog() {
+    final TextEditingController tokenController = TextEditingController(text: _githubToken);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A20),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: tokenController,
+          obscureText: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: 'GitHub Personal Access Token',
+            labelStyle: TextStyle(color: Colors.white.withAlpha(150)),
+            hintText: 'ghp_...',
+            hintStyle: TextStyle(color: Colors.white.withAlpha(50)),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withAlpha(20)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: Color(0xFF5E5CE6)),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withAlpha(150))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5E5CE6)),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('github_token', tokenController.text.trim());
+              setState(() {
+                _githubToken = tokenController.text.trim();
+              });
+              if (mounted) Navigator.pop(context);
+              _showSnack('Settings saved');
+            },
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _createPullRequest() async {
+    if (_generatedMarkdown.isEmpty) return;
+    if (_githubToken.isEmpty) {
+      _showSnack('Please set a GitHub Token in settings first');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final prUrl = await ApiService.createPullRequest(
+        githubUrl: _urlController.text,
+        githubToken: _githubToken,
+        markdown: _generatedMarkdown, // Uses the latest edited markdown from the text field
+      );
+      _showSnack('PR Created Successfully!');
+      final uri = Uri.parse(prUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'Failed to create PR: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -113,6 +198,7 @@ class _DesktopScreenState extends State<DesktopScreen>
     setState(() {
       _urlController.text = entry.githubUrl;
       _generatedMarkdown = entry.markdown;
+      _markdownController.text = entry.markdown;
       _repoOwner = entry.repoOwner;
       _repoName = entry.repoName;
       _repoLabel = '${entry.repoOwner}/${entry.repoName}';
@@ -296,12 +382,24 @@ class _DesktopScreenState extends State<DesktopScreen>
           ),
 
           // Action buttons (appear when output exists)
+          const SizedBox(width: 8),
+          _ToolbarIconButton(
+            icon: Icons.settings,
+            tooltip: 'Settings (GitHub Token)',
+            onPressed: _showSettingsDialog,
+          ),
           if (hasOutput) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 4),
             _ToolbarIconButton(
               icon: Icons.copy,
               tooltip: 'Copy markdown',
               onPressed: _copyToClipboard,
+            ),
+            const SizedBox(width: 4),
+            _ToolbarIconButton(
+              icon: Icons.merge_type,
+              tooltip: 'Push to GitHub (Create PR)',
+              onPressed: _createPullRequest,
             ),
             const SizedBox(width: 4),
             _ToolbarIconButton(
@@ -391,16 +489,24 @@ class _DesktopScreenState extends State<DesktopScreen>
                   'Raw markdown will\nappear here',
                   Icons.code_outlined,
                 )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: SelectableText(
-                    _generatedMarkdown,
-                    style: const TextStyle(
-                      fontFamily: 'Cascadia Code, Fira Code, monospace',
-                      fontSize: 13,
-                      height: 1.7,
-                      color: Color(0xFFB0B0D0),
-                    ),
+              : TextField(
+                  controller: _markdownController,
+                  maxLines: null,
+                  expands: true,
+                  onChanged: (val) {
+                    setState(() {
+                      _generatedMarkdown = val;
+                    });
+                  },
+                  style: const TextStyle(
+                    fontFamily: 'Cascadia Code, Fira Code, monospace',
+                    fontSize: 13,
+                    height: 1.7,
+                    color: Color(0xFFB0B0D0),
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(20),
                   ),
                 ),
         ),
