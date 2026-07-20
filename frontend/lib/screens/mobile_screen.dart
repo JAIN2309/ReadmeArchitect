@@ -13,6 +13,8 @@ import '../models/history_entry.dart';
 import '../services/api_service.dart';
 import '../services/export_service.dart';
 import '../widgets/history_panel.dart';
+import '../widgets/badge_selector.dart';
+import '../theme/theme_provider.dart';
 
 class MobileScreen extends StatefulWidget {
   const MobileScreen({super.key});
@@ -29,6 +31,8 @@ class _MobileScreenState extends State<MobileScreen>
   final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
   int _selectedModeIndex = 0;
   String _githubToken = '';
+
+  List<String> _selectedBadges = [];
 
   final TextEditingController _markdownController = TextEditingController();
   bool _isPreview = true;
@@ -77,6 +81,7 @@ class _MobileScreenState extends State<MobileScreen>
       _isLoading = true;
       _errorMessage = null;
       _generatedMarkdown = '';
+      _selectedBadges = [];
     });
 
     try {
@@ -142,7 +147,7 @@ class _MobileScreenState extends State<MobileScreen>
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF1A1A36),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 2),
       ),
@@ -154,32 +159,32 @@ class _MobileScreenState extends State<MobileScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A20),
-        title: const Text('Settings', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text('Settings', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
           controller: tokenController,
           obscureText: true,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             labelText: 'GitHub Personal Access Token',
-            labelStyle: TextStyle(color: Colors.white.withAlpha(150)),
+            labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
             hintText: 'ghp_...',
-            hintStyle: TextStyle(color: Colors.white.withAlpha(50)),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(50)),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withAlpha(20)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(20)),
             ),
-            focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: Color(0xFF5E5CE6)),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
             ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Colors.white.withAlpha(150))),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5E5CE6)),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               await prefs.setString('github_token', tokenController.text.trim());
@@ -189,7 +194,7 @@ class _MobileScreenState extends State<MobileScreen>
               if (mounted) Navigator.pop(context);
               _showSnack('Settings saved');
             },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
@@ -224,11 +229,12 @@ class _MobileScreenState extends State<MobileScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final hasOutput = _generatedMarkdown.isNotEmpty;
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFF0D0D1A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text(
           'README Architect',
@@ -239,15 +245,46 @@ class _MobileScreenState extends State<MobileScreen>
           ),
         ),
         centerTitle: true,
-        backgroundColor: const Color(0xFF14142B),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: const Icon(Icons.history, color: Color(0xFF6C63FF)),
+          icon: Icon(Icons.history, color: Theme.of(context).colorScheme.primary),
           tooltip: 'History',
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
+          if (hasOutput && _repoOwner.isNotEmpty && _repoName.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.local_police),
+              tooltip: 'Add Badges',
+              color: Theme.of(context).colorScheme.primary,
+              onPressed: () {
+                BadgeSelector.show(
+                  context,
+                  repoOwner: _repoOwner,
+                  repoName: _repoName,
+                  initialSelectedKeys: _selectedBadges,
+                  onApply: (selectedKeys, markdownToInject) {
+                    setState(() {
+                      _selectedBadges = selectedKeys;
+                      if (markdownToInject.isNotEmpty) {
+                        _generatedMarkdown = markdownToInject + '\n\n' + _generatedMarkdown;
+                        _markdownController.text = _generatedMarkdown;
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          IconButton(
+            icon: Icon(ThemeProvider.themeModeNotifier.value == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode),
+            tooltip: 'Toggle Theme',
+            onPressed: () {
+              ThemeProvider.toggleTheme();
+              setState(() {}); // Rebuild to update icon
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings, size: 20),
             tooltip: 'Settings (GitHub Token)',
@@ -275,7 +312,7 @@ class _MobileScreenState extends State<MobileScreen>
 
       // ── History drawer ──
       drawer: Drawer(
-        backgroundColor: const Color(0xFF0F0F24),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: HistoryPanel(
             key: _historyKey,
@@ -293,21 +330,21 @@ class _MobileScreenState extends State<MobileScreen>
               // ── URL Input ──
               TextField(
                 controller: _urlController,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'https://github.com/owner/repo',
-                  hintStyle: TextStyle(color: Colors.white.withAlpha(90)),
-                  prefixIcon: const Icon(Icons.link, color: Color(0xFF6C63FF)),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(90)),
+                  prefixIcon: Icon(Icons.link, color: Theme.of(context).colorScheme.primary),
                   filled: true,
-                  fillColor: const Color(0xFF1A1A36),
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF6C63FF),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
                       width: 1.5,
                     ),
                   ),
@@ -323,7 +360,7 @@ class _MobileScreenState extends State<MobileScreen>
               // ── Mode Selector ──
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A36),
+                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 padding: const EdgeInsets.all(4),
@@ -339,9 +376,9 @@ class _MobileScreenState extends State<MobileScreen>
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             gradient: isSelected
-                                ? const LinearGradient(
+                                ? LinearGradient(
                                     colors: [
-                                      Color(0xFF6C63FF),
+                                      Theme.of(context).colorScheme.primary,
                                       Color(0xFF8B5CF6),
                                     ],
                                   )
@@ -353,8 +390,8 @@ class _MobileScreenState extends State<MobileScreen>
                             _modes[i],
                             style: TextStyle(
                               color: isSelected
-                                  ? Colors.white
-                                  : Colors.white.withAlpha(150),
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Theme.of(context).colorScheme.onSurface.withAlpha(150),
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w400,
@@ -376,7 +413,7 @@ class _MobileScreenState extends State<MobileScreen>
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _generate,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     disabledBackgroundColor: const Color(0xFF3A3670),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -384,12 +421,12 @@ class _MobileScreenState extends State<MobileScreen>
                     elevation: 0,
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         )
                       : const Row(
@@ -438,19 +475,19 @@ class _MobileScreenState extends State<MobileScreen>
                       ElevatedButton(
                         onPressed: () => setState(() => _isPreview = false),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !_isPreview ? const Color(0xFF6C63FF) : const Color(0xFF1A1A36),
+                          backgroundColor: !_isPreview ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHigh,
                           elevation: 0,
                         ),
-                        child: Text('Edit Raw', style: TextStyle(color: !_isPreview ? Colors.white : Colors.white.withAlpha(150))),
+                        child: Text('Edit Raw', style: TextStyle(color: !_isPreview ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withAlpha(150))),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () => setState(() => _isPreview = true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isPreview ? const Color(0xFF6C63FF) : const Color(0xFF1A1A36),
+                          backgroundColor: _isPreview ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHigh,
                           elevation: 0,
                         ),
-                        child: Text('Preview', style: TextStyle(color: _isPreview ? Colors.white : Colors.white.withAlpha(150))),
+                        child: Text('Preview', style: TextStyle(color: _isPreview ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withAlpha(150))),
                       ),
                     ],
                   ),
@@ -458,10 +495,10 @@ class _MobileScreenState extends State<MobileScreen>
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A36),
+                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: Colors.white.withAlpha(15),
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
                     ),
                   ),
                   child: !hasOutput
@@ -476,13 +513,13 @@ class _MobileScreenState extends State<MobileScreen>
                                 Icon(
                                   Icons.description_outlined,
                                   size: 48,
-                                  color: Colors.white.withAlpha(60),
+                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(60),
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Your generated README will appear here',
                                   style: TextStyle(
-                                    color: Colors.white.withAlpha(80),
+                                    color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
                                     fontSize: 13,
                                   ),
                                 ),
@@ -500,30 +537,30 @@ class _MobileScreenState extends State<MobileScreen>
                                     Theme.of(context),
                                   ).copyWith(
                                     p: TextStyle(
-                                      color: Colors.white.withAlpha(200),
+                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
                                       fontSize: 14.5,
                                       height: 1.6,
                                       letterSpacing: 0.2,
                                     ),
-                                    h1: const TextStyle(
-                                      color: Colors.white,
+                                    h1: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 24,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: -0.5,
                                     ),
-                                    h2: const TextStyle(
-                                      color: Colors.white,
+                                    h2: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 19,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: -0.3,
                                     ),
-                                    h3: const TextStyle(
-                                      color: Colors.white,
+                                    h3: TextStyle(
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
                                     ),
                                     code: TextStyle(
-                                      backgroundColor: Colors.white.withAlpha(12),
+                                      backgroundColor: Theme.of(context).colorScheme.onSurface.withAlpha(12),
                                       color: const Color(0xFFA5B4FC),
                                       fontSize: 13,
                                       fontFamily: 'monospace',
@@ -531,29 +568,29 @@ class _MobileScreenState extends State<MobileScreen>
                                     codeblockDecoration: BoxDecoration(
                                       color: const Color(0xFF141417),
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: Colors.white.withAlpha(12)),
+                                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(12)),
                                     ),
                                     listBullet: TextStyle(
-                                      color: Colors.white.withAlpha(150),
+                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                                       fontSize: 14,
                                     ),
                                     blockquoteDecoration: BoxDecoration(
                                       color: Colors.transparent,
                                       border: Border(
                                         left: BorderSide(
-                                          color: Colors.white.withAlpha(30),
+                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(30),
                                           width: 3,
                                         ),
                                       ),
                                     ),
                                     blockquote: TextStyle(
-                                      color: Colors.white.withAlpha(150),
+                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
                                       fontStyle: FontStyle.italic,
                                     ),
                                     horizontalRuleDecoration: BoxDecoration(
                                       border: Border(
                                         top: BorderSide(
-                                          color: Colors.white.withAlpha(12),
+                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(12),
                                           width: 1,
                                         ),
                                       ),

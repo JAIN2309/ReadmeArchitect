@@ -169,8 +169,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D1A),
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: FadeTransition(
         opacity: _exitFade,
         child: Center(
@@ -194,21 +196,21 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 36),
 
               // ── Title ──
-              SlideTransition(
-                position: _titleSlide,
-                child: FadeTransition(
-                  opacity: _titleFade,
-                  child: const Text(
-                    'README Architect',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 1.0,
+                SlideTransition(
+                  position: _titleSlide,
+                  child: FadeTransition(
+                    opacity: _titleFade,
+                    child: Text(
+                      'README Architect',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.onSurface,
+                        letterSpacing: 1.0,
+                      ),
                     ),
                   ),
                 ),
-              ),
 
               const SizedBox(height: 12),
 
@@ -220,7 +222,7 @@ class _SplashScreenState extends State<SplashScreen>
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
-                    color: Colors.white.withAlpha(130),
+                    color: theme.colorScheme.onSurface.withAlpha(130),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -246,14 +248,14 @@ class _SplashScreenState extends State<SplashScreen>
                   duration: const Duration(milliseconds: 2000),
                   builder: (context, value, _) {
                     final dots = '.' * ((value % 3) + 1);
-                    return Text(
-                      'Initializing$dots',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withAlpha(80),
-                        letterSpacing: 0.8,
-                      ),
-                    );
+                      return Text(
+                        'Initializing$dots',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurface.withAlpha(80),
+                          letterSpacing: 0.8,
+                        ),
+                      );
                   },
                 ),
               ),
@@ -266,23 +268,26 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// Icon container with a sweeping shimmer highlight.
   Widget _buildShimmerIcon() {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    
     return Container(
       width: 100,
       height: 100,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const RadialGradient(
-          colors: [Color(0xFF1E1E3F), Color(0xFF14142B)],
+        gradient: RadialGradient(
+          colors: [theme.colorScheme.surfaceContainerHigh, theme.colorScheme.surface],
           radius: 0.85,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C63FF).withAlpha(80),
+            color: primary.withAlpha(80),
             blurRadius: 40,
             spreadRadius: 2,
           ),
           BoxShadow(
-            color: const Color(0xFF8B5CF6).withAlpha(40),
+            color: primary.withAlpha(40),
             blurRadius: 80,
             spreadRadius: 8,
           ),
@@ -307,11 +312,11 @@ class _SplashScreenState extends State<SplashScreen>
           ).createShader(bounds);
         },
         blendMode: BlendMode.srcATop,
-        child: const Center(
+        child: Center(
           child: Icon(
             Icons.auto_awesome,
             size: 44,
-            color: Color(0xFF6C63FF),
+            color: primary,
           ),
         ),
       ),
@@ -320,6 +325,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   /// Custom animated progress bar with gradient fill.
   Widget _buildProgressBar(double value) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    
     return SizedBox(
       width: 220,
       child: Column(
@@ -328,7 +336,7 @@ class _SplashScreenState extends State<SplashScreen>
             height: 4,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(2),
-              color: Colors.white.withAlpha(15),
+              color: theme.colorScheme.onSurface.withAlpha(15),
             ),
             child: Align(
               alignment: Alignment.centerLeft,
@@ -337,12 +345,12 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6C63FF), Color(0xFF8B5CF6), Color(0xFFAB8EF5)],
+                    gradient: LinearGradient(
+                      colors: [primary, primary.withAlpha(200), primary.withAlpha(150)],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6C63FF).withAlpha(100),
+                        color: primary.withAlpha(100),
                         blurRadius: 8,
                         offset: const Offset(0, 1),
                       ),

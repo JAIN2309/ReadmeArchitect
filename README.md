@@ -60,44 +60,47 @@ A **production-grade AI documentation engine** connecting developers with automa
 <td width="33%" valign="top">
 
 ### 💻 Desktop/Web Frontend
-- Sleek, side-by-side **split pane** layout
-- Live monospace code editor view (raw markdown source)
-- **Real-time Markdown Renderer** preview pane
-- Smooth shimmer loading animations
+- Sleek, side-by-side **split pane** layout with live rendering
+- **Interactive Markdown Editor** — tweak the AI output before exporting
+- **Direct GitHub Integration** — push generated READMEs directly via Pull Request using a Personal Access Token
+- **Interactive Badge Selector** — inject live Shields.io badges (License, Stars, Forks, etc.) with a visual UI
+- **Theme Engine** — toggle instantly between pristine Light Mode and premium Dark Mode
 - Collapsible **History Sidebar** with animated open/close
 - One-click **copy** & `.md` **download** (browser file save)
-- **Error banner** with inline dismiss button
-- **Keyboard shortcut** — press Enter in the URL field to generate
-- Color-coded **mode badges** (green / blue / amber) on history entries
-- **Time-ago labels** on history entries (e.g., "2m ago", "1h ago")
+- Color-coded **mode badges** and **time-ago labels** on history entries
 
 </td>
 <td width="33%" valign="top">
 
 ### 📱 Native Mobile Frontend
 - Single-column, thumb-friendly vertical scroll layout
-- Beautiful **Onboarding Guide Map** with glowing aesthetics (4-step walkthrough)
+- **Tabbed Live Preview** — switch seamlessly between Editor and Rendered Preview
+- **Direct GitHub Integration** — push your README directly via PR from your phone
+- **Theme Engine & Badge Selector** — full feature parity with desktop
+- Beautiful **Onboarding Guide Map** with glowing aesthetics
 - **Drawer-based History Panel** accessible via AppBar icon
-- **Pulsing empty-state animation** before first generation
-- Styled error container with colored border
-- Instant **clipboard fallback** if browser downloads aren't supported
 - Delete individual history entries or **clear all** with confirmation dialog
-- Mode selector with **animated gradient transitions**
+- Instant **clipboard fallback** if browser downloads aren't supported
 
 </td>
 </tr>
 </table>
 
 ### 🎬 Shared Experience
-- **Animated Splash Screen** — 6-stage staggered animation sequence:
-  1. Icon entrance (scale + rotate with elastic overshoot)
-  2. Shimmer sweep across icon
-  3. Title slide-up with fade
-  4. Subtitle fade-in
-  5. Gradient progress bar fill
-  6. Exit fade → navigate to onboarding
-- **4-Step Interactive Onboarding** — Paste URL → Select Mode → Preview → Export/History
-- **Responsive Platform Detection** — auto-routes to Mobile or Desktop layout based on runtime environment (native Android vs Chrome/Edge)
+- **App Theming Engine** — dynamically built from the ground up to support both deep, Linear-inspired dark mode and clean, Apple-style light mode, persisted locally.
+- **Animated Splash Screen** — 6-stage staggered animation sequence.
+- **4-Step Interactive Onboarding** — Paste URL → Select Mode → Preview → Export/History.
+- **Responsive Platform Detection** — auto-routes to Mobile or Desktop layout based on runtime environment.
+
+---
+
+## 🛣️ Upcoming Features (Roadmap)
+While the core experience is highly polished, the following features are planned for future updates:
+- **GitHub OAuth2 Login:** Replace Personal Access Tokens (PATs) with a seamless "Sign in with GitHub" web flow.
+- **Private Repository Support:** Allow the AI to scrape and generate documentation for private enterprise repositories.
+- **Custom Badge Support:** Let users input custom Shields.io URLs in the Badge Selector.
+- **Pre-Commit Hook Integrations:** Provide a CLI tool that syncs the generated README into a local Git workflow.
+- **Expanded Tech Stack Detection:** Deeper scraping support for Monorepos and lesser-known build tools.
 
 ---
 

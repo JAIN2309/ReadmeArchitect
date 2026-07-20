@@ -66,11 +66,11 @@ class HistoryPanelState extends State<HistoryPanel> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A36),
-        title: const Text('Clear History', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text('Clear History', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Delete all past generations? This cannot be undone.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
         ),
         actions: [
           TextButton(
@@ -105,14 +105,15 @@ class HistoryPanelState extends State<HistoryPanel> {
       'Basic' => const Color(0xFF22C55E),
       'Advanced' => const Color(0xFF3B82F6),
       'Professional' => const Color(0xFFF59E0B),
-      _ => const Color(0xFF6C63FF),
+      _ => Theme.of(context).colorScheme.primary,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      color: const Color(0xFF0F0F24),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -120,20 +121,20 @@ class HistoryPanelState extends State<HistoryPanel> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFF14142B),
+              color: Theme.of(context).colorScheme.surface,
               border: Border(
-                bottom: BorderSide(color: Colors.white.withAlpha(15)),
+                bottom: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(15)),
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.history, color: Color(0xFF6C63FF), size: 20),
+                Icon(Icons.history, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Generation History',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.3,
@@ -144,7 +145,7 @@ class HistoryPanelState extends State<HistoryPanel> {
                   IconButton(
                     icon: Icon(
                       Icons.delete_sweep,
-                      color: Colors.white.withAlpha(100),
+                      color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                       size: 20,
                     ),
                     tooltip: 'Clear all',
@@ -157,10 +158,10 @@ class HistoryPanelState extends State<HistoryPanel> {
           // ── Body ──
           Expanded(
             child: _isLoading
-                ? const Center(
+                ? Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color(0xFF6C63FF),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   )
                 : _error != null
@@ -170,11 +171,11 @@ class HistoryPanelState extends State<HistoryPanel> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.cloud_off, color: Colors.white.withAlpha(60), size: 36),
+                              Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.onSurface.withAlpha(60), size: 36),
                               const SizedBox(height: 12),
                               Text(
                                 'Could not load history',
-                                style: TextStyle(color: Colors.white.withAlpha(80), fontSize: 13),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(80), fontSize: 13),
                               ),
                               const SizedBox(height: 8),
                               TextButton.icon(
@@ -191,11 +192,11 @@ class HistoryPanelState extends State<HistoryPanel> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.inbox_outlined, color: Colors.white.withAlpha(40), size: 44),
+                                Icon(Icons.inbox_outlined, color: Theme.of(context).colorScheme.onSurface.withAlpha(40), size: 44),
                                 const SizedBox(height: 12),
                                 Text(
                                   'No generations yet',
-                                  style: TextStyle(color: Colors.white.withAlpha(60), fontSize: 13),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(60), fontSize: 13),
                                 ),
                               ],
                             ),
@@ -204,7 +205,7 @@ class HistoryPanelState extends State<HistoryPanel> {
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             itemCount: _entries.length,
                             separatorBuilder: (_, i) => Divider(
-                              color: Colors.white.withAlpha(8),
+                              color: Theme.of(context).colorScheme.onSurface.withAlpha(8),
                               height: 1,
                             ),
                             itemBuilder: (context, index) {
@@ -241,9 +242,10 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      splashColor: const Color(0xFF6C63FF).withAlpha(20),
+      splashColor: Theme.of(context).colorScheme.primary.withAlpha(20),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
@@ -255,8 +257,8 @@ class _HistoryTile extends StatelessWidget {
                 children: [
                   Text(
                     '${entry.repoOwner}/${entry.repoName}',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -290,7 +292,7 @@ class _HistoryTile extends StatelessWidget {
                       Text(
                         entry.timeAgo,
                         style: TextStyle(
-                          color: Colors.white.withAlpha(60),
+                          color: Theme.of(context).colorScheme.onSurface.withAlpha(60),
                           fontSize: 11,
                         ),
                       ),
@@ -305,7 +307,7 @@ class _HistoryTile extends StatelessWidget {
               icon: Icon(
                 Icons.close,
                 size: 16,
-                color: Colors.white.withAlpha(50),
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(50),
               ),
               onPressed: onDelete,
               tooltip: 'Remove',

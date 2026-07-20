@@ -74,8 +74,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final onSurface = theme.colorScheme.onSurface;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0C), // Linear deep dark
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -89,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     'Skip',
                     style: TextStyle(
-                      color: Colors.white.withAlpha(100),
+                      color: onSurface.withAlpha(100),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -116,15 +120,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: 100,
                           height: 100,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141417),
+                            color: theme.colorScheme.surface,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(0xFF5E5CE6).withAlpha(50),
+                              color: primary.withAlpha(50),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF5E5CE6).withAlpha(20),
+                                color: primary.withAlpha(20),
                                 blurRadius: 40,
                                 spreadRadius: 10,
                               ),
@@ -133,7 +137,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Icon(
                             step.icon,
                             size: 40,
-                            color: const Color(0xFF5E5CE6),
+                            color: primary,
                           ),
                         ),
                         const SizedBox(height: 48),
@@ -142,8 +146,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Text(
                           step.title,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: onSurface,
                             fontSize: 24,
                             fontWeight: FontWeight.w600,
                             letterSpacing: -0.5,
@@ -156,7 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           step.description,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.white.withAlpha(180),
+                            color: onSurface.withAlpha(180),
                             fontSize: 15,
                             height: 1.6,
                           ),
@@ -185,8 +189,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         width: _currentPage == index ? 24 : 6,
                         decoration: BoxDecoration(
                           color: _currentPage == index
-                              ? const Color(0xFF5E5CE6)
-                              : Colors.white.withAlpha(40),
+                              ? primary
+                              : onSurface.withAlpha(40),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -206,8 +210,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5E5CE6),
-                      foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
