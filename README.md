@@ -337,6 +337,15 @@ From Swagger, you can test all endpoints directly — click **Try it out** on an
 
 ---
 
+## 🌟 Featured Portfolio Projects
+
+| Project | Description | Live Frontend | Live Backend | Stack |
+| :--- | :--- | :--- | :--- | :--- |
+| **README Architect** | AI-powered documentation engine connecting developers with automated, picture-perfect README generation. | 🌐 [Live Demo](https://jain2309.github.io/ReadmeArchitect/) | ⚙️ [FastAPI Service](https://readmearchitect.onrender.com/health) | Flutter · Dart · FastAPI · Gemini AI |
+| **FoodBridge MERN** | Full-stack real-time food rescue platform connecting donors with NGOs to minimize food waste. | 🌐 [Live App](https://jain2309.github.io/foodbridgemern/) | ⚙️ [API Service](https://foodbridgemern.onrender.com) | React · Node.js · Express · MongoDB · Redis |
+
+---
+
 <div align="center">
 
 ## 👤 Author
