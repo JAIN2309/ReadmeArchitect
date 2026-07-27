@@ -402,20 +402,17 @@ class _MobileScreenState extends State<MobileScreen>
                                           backgroundColor: Theme.of(
                                             context,
                                           ).colorScheme.onSurface.withAlpha(12),
-                                          color: const Color(0xFFA5B4FC),
+                                          color: Theme.of(context).colorScheme.primary,
                                           fontSize: 13,
                                           fontFamily: 'monospace',
                                         ),
                                         codeblockDecoration: BoxDecoration(
-                                          color: const Color(0xFF141417),
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
+                                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
+                                          borderRadius: BorderRadius.circular(10),
                                           border: Border.all(
                                             color: Theme.of(context)
                                                 .colorScheme
-                                                .onSurface
-                                                .withAlpha(12),
+                                                .surfaceContainerHighest,
                                           ),
                                         ),
                                         listBullet: TextStyle(
@@ -462,11 +459,11 @@ class _MobileScreenState extends State<MobileScreen>
                                   maxLines: null,
                                   expands: true,
                                   onChanged: _controller.updateMarkdown,
-                                  style: const TextStyle(
-                                    fontFamily: 'monospace',
+                                  style: TextStyle(
+                                    fontFamily: 'Cascadia Code, Fira Code, monospace',
                                     fontSize: 13,
-                                    height: 1.5,
-                                    color: Color(0xFFB0B0D0),
+                                    height: 1.7,
+                                    color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
                                   ),
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,

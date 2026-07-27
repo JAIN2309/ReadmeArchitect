@@ -40,14 +40,7 @@ class ModeSelector extends StatelessWidget {
               curve: Curves.easeInOut,
               padding: padding,
               decoration: BoxDecoration(
-                gradient: isSelected
-                    ? LinearGradient(
-                        colors: [
-                          Theme.of(context).colorScheme.primary,
-                          const Color(0xFF8B5CF6),
-                        ],
-                      )
-                    : null,
+                color: isSelected ? Theme.of(context).colorScheme.onSurface : Colors.transparent,
                 borderRadius: BorderRadius.circular(borderRadius - 2),
               ),
               alignment: isExpanded ? Alignment.center : null,
@@ -55,9 +48,9 @@ class ModeSelector extends StatelessWidget {
                 modes[i],
                 style: TextStyle(
                   color: isSelected
-                      ? Theme.of(context).colorScheme.onSurface
+                      ? Theme.of(context).colorScheme.surface
                       : Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontSize: fontSize,
                 ),
               ),

@@ -83,9 +83,9 @@ class _DesktopScreenState extends State<DesktopScreen>
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFF14142B),
-        border: Border(bottom: BorderSide(color: Color(0xFF2A2A4A), width: 1)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.surfaceContainerHighest, width: 1)),
       ),
       child: Row(
         children: [
@@ -275,8 +275,8 @@ class _DesktopScreenState extends State<DesktopScreen>
               ),
               child: Text(
                 _controller.repoLabel,
-                style: const TextStyle(
-                  color: Color(0xFF8B5CF6),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
@@ -304,11 +304,11 @@ class _DesktopScreenState extends State<DesktopScreen>
                   maxLines: null,
                   expands: true,
                   onChanged: _controller.updateMarkdown,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Cascadia Code, Fira Code, monospace',
                     fontSize: 13,
                     height: 1.7,
-                    color: Color(0xFFB0B0D0),
+                    color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
                   ),
                   decoration: const InputDecoration(
                     border: InputBorder.none,
@@ -365,17 +365,17 @@ class _DesktopScreenState extends State<DesktopScreen>
                           backgroundColor: Theme.of(
                             context,
                           ).colorScheme.onSurface.withAlpha(12),
-                          color: const Color(0xFFA5B4FC),
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 13,
                           fontFamily: 'monospace',
                         ),
                         codeblockDecoration: BoxDecoration(
-                          color: const Color(0xFF141417),
+                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withAlpha(12),
+                            ).colorScheme.surfaceContainerHighest,
                           ),
                         ),
                         listBullet: TextStyle(
@@ -549,12 +549,12 @@ class _DesktopScreenState extends State<DesktopScreen>
                       right: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF12122A),
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withAlpha(10),
+                        ).colorScheme.surfaceContainerHighest,
                       ),
                     ),
                     child: ClipRRect(
@@ -581,12 +581,12 @@ class _DesktopScreenState extends State<DesktopScreen>
                       right: 20,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF12122A),
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withAlpha(10),
+                        ).colorScheme.surfaceContainerHighest,
                       ),
                     ),
                     child: ClipRRect(
