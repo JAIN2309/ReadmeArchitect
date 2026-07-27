@@ -166,7 +166,7 @@ readme_architect/
 │   ├── main.py                    # FastAPI app entry point & router attachment
 │   ├── routes.py                  # API endpoints and HTTP methods
 │   ├── services.py                # Core business logic (Scraping, LLM, PR creation)
-│   ├── models.py                  # Pydantic schemas (Request/Response models)
+│   ├── models/                    # Pydantic schemas (Request/Response models)
 │   ├── store.py                   # In-memory history state management
 │   ├── requirements.txt           # Python dependencies
 │   ├── .env.example               # Environment template (Needs GEMINI_API_KEY)
