@@ -28,15 +28,12 @@ class GenerateButton extends StatelessWidget {
       height: height,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.onSurface,
-          foregroundColor: Theme.of(context).colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+        style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)),
           ),
-          padding: padding,
-          elevation: isLoading ? 0 : 8,
-          shadowColor: Theme.of(context).colorScheme.onSurface.withAlpha(40),
+          padding: WidgetStatePropertyAll(padding),
+          elevation: WidgetStatePropertyAll(isLoading ? 0 : 0),
         ),
         child: isLoading
             ? SizedBox(

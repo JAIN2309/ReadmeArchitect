@@ -112,14 +112,14 @@ class _DesktopScreenState extends State<DesktopScreen>
           const SizedBox(width: 12),
 
           // Logo / title
-          const Row(
+          Row(
             children: [
-              Icon(Icons.auto_awesome, color: Colors.purpleAccent, size: 22),
-              SizedBox(width: 8),
+              Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary, size: 22),
+              const SizedBox(width: 8),
               Text(
                 'README Architect',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
