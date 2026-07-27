@@ -26,7 +26,7 @@ def _mock_tree(owner: str, repo: str) -> str:
         "📄 .gitignore\n"
     )
 
-async def scrape_repo_structure(github_url: str, token: str | None = None) -> tuple[str, str, str]:
+async def scrape_repo_structure(github_url: str, token: str | None = None) -> tuple[str, str, str, bool]:
     owner, repo = parse_owner_repo(github_url)
     repo_api = f"https://api.github.com/repos/{owner}/{repo}"
     tree_string = ""
@@ -34,10 +34,12 @@ async def scrape_repo_structure(github_url: str, token: str | None = None) -> tu
     if token:
         req_headers["Authorization"] = f"Bearer {token}"
 
+    is_mock = False
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         repo_resp = await client.get(repo_api, headers=req_headers)
         if repo_resp.status_code != 200:
-            return owner, repo, _mock_tree(owner, repo)
+            return owner, repo, _mock_tree(owner, repo), True
 
         repo_data = repo_resp.json()
         default_branch = repo_data.get("default_branch", "main")
@@ -72,6 +74,7 @@ async def scrape_repo_structure(github_url: str, token: str | None = None) -> tu
             
             tree_string += "\n" + "".join(file_blocks)
         else:
+            is_mock = True
             tree_string = _mock_tree(owner, repo)
 
     meta_block = (
@@ -84,4 +87,4 @@ async def scrape_repo_structure(github_url: str, token: str | None = None) -> tu
         f"---\n"
     )
 
-    return owner, repo, meta_block + tree_string
+    return owner, repo, meta_block + tree_string, is_mock

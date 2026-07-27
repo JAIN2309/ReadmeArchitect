@@ -23,3 +23,4 @@ class ReadmeResponse(BaseModel):
     repo_owner: str
     repo_name: str
     presentation_mode: PresentationMode
+    is_mock: bool = False

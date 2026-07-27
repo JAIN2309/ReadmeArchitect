@@ -1,32 +1,111 @@
+import sqlite3
+import json
+from contextlib import contextmanager
 from models import HistoryEntry
 
 # ---------------------------------------------------------------------------
-# In-memory history store
+# SQLite history store
 # ---------------------------------------------------------------------------
 
-_history: list[HistoryEntry] = []
-_next_id: int = 1
+DB_FILE = "history.db"
 
-def get_history() -> list[HistoryEntry]:
-    return _history
+def _init_db():
+    with sqlite3.connect(DB_FILE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                github_url TEXT NOT NULL,
+                repo_owner TEXT NOT NULL,
+                repo_name TEXT NOT NULL,
+                presentation_mode TEXT NOT NULL,
+                markdown TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        conn.commit()
 
-def add_history_entry(entry: HistoryEntry):
-    global _next_id
-    _history.insert(0, entry)
-    _next_id += 1
+_init_db()
 
-def delete_history_entry(entry_id: int) -> HistoryEntry | None:
-    global _history
-    idx = next((i for i, e in enumerate(_history) if e.id == entry_id), None)
-    if idx is None:
-        return None
-    return _history.pop(idx)
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    try:
+        yield conn
+    finally:
+        conn.close()
 
-def clear_history() -> int:
-    global _history
-    count = len(_history)
-    _history = []
-    return count
+def get_history(session_id: str) -> list[HistoryEntry]:
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM history WHERE session_id = ? ORDER BY id DESC",
+            (session_id,)
+        ).fetchall()
+        
+        entries = []
+        for row in rows:
+            entries.append(HistoryEntry(
+                id=row["id"],
+                github_url=row["github_url"],
+                repo_owner=row["repo_owner"],
+                repo_name=row["repo_name"],
+                presentation_mode=row["presentation_mode"],
+                markdown=row["markdown"],
+                created_at=row["created_at"],
+            ))
+        return entries
 
-def get_next_id() -> int:
-    return _next_id
+def add_history_entry(session_id: str, entry: HistoryEntry) -> HistoryEntry:
+    with get_db() as conn:
+        cursor = conn.execute(
+            """
+            INSERT INTO history (
+                session_id, github_url, repo_owner, repo_name, 
+                presentation_mode, markdown, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                session_id, entry.github_url, entry.repo_owner, 
+                entry.repo_name, entry.presentation_mode, 
+                entry.markdown, entry.created_at
+            )
+        )
+        conn.commit()
+        entry.id = cursor.lastrowid
+        return entry
+
+def delete_history_entry(session_id: str, entry_id: int) -> HistoryEntry | None:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM history WHERE id = ? AND session_id = ?",
+            (entry_id, session_id)
+        ).fetchone()
+        
+        if not row:
+            return None
+            
+        conn.execute(
+            "DELETE FROM history WHERE id = ? AND session_id = ?",
+            (entry_id, session_id)
+        )
+        conn.commit()
+        
+        return HistoryEntry(
+            id=row["id"],
+            github_url=row["github_url"],
+            repo_owner=row["repo_owner"],
+            repo_name=row["repo_name"],
+            presentation_mode=row["presentation_mode"],
+            markdown=row["markdown"],
+            created_at=row["created_at"],
+        )
+
+def clear_history(session_id: str) -> int:
+    with get_db() as conn:
+        cursor = conn.execute(
+            "DELETE FROM history WHERE session_id = ?",
+            (session_id,)
+        )
+        conn.commit()
+        return cursor.rowcount

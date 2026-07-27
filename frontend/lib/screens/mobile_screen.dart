@@ -19,6 +19,7 @@ import '../widgets/shared/url_input_field.dart';
 import '../widgets/shared/mode_selector.dart';
 import '../widgets/shared/generate_button.dart';
 import '../widgets/shared/settings_dialog.dart';
+import '../controllers/readme_controller.dart';
 
 class MobileScreen extends StatefulWidget {
   const MobileScreen({super.key});
@@ -29,126 +30,31 @@ class MobileScreen extends StatefulWidget {
 
 class _MobileScreenState extends State<MobileScreen>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _urlController = TextEditingController();
+  final ReadmeController _controller = ReadmeController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final GlobalKey<HistoryPanelState> _historyKey =
-      GlobalKey<HistoryPanelState>();
-  final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
-  int _selectedModeIndex = 0;
-  String _githubToken = '';
-
-  List<String> _selectedBadges = [];
-
-  final TextEditingController _markdownController = TextEditingController();
+  final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
+  
   bool _isPreview = true;
-
-  bool _isLoading = false;
-  String _generatedMarkdown = '';
-  String _repoOwner = '';
-  String _repoName = '';
-  String? _errorMessage;
-
   late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _loadToken();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
   }
 
-  Future<void> _loadToken() async {
-    final storage = const FlutterSecureStorage();
-    final token = await storage.read(key: 'github_token');
-    setState(() {
-      _githubToken = token ?? '';
-    });
-  }
-
   @override
   void dispose() {
-    _urlController.dispose();
-    _markdownController.dispose();
+    _controller.dispose();
     _pulseController.dispose();
     super.dispose();
   }
 
-  Future<void> _generate() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a GitHub repository URL.');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _generatedMarkdown = '';
-      _selectedBadges = [];
-    });
-
-    try {
-      final result = await ApiService.generateReadme(
-        githubUrl: url,
-        presentationMode: _modes[_selectedModeIndex],
-        githubToken: _githubToken,
-      );
-      setState(() {
-        _generatedMarkdown = result.markdown;
-        _markdownController.text = result.markdown;
-        _isPreview = true;
-        _repoOwner = result.repoOwner;
-        _repoName = result.repoName;
-      });
-      // Refresh history panel after a new generation.
-      _historyKey.currentState?.refresh();
-    } catch (e) {
-      setState(() => _errorMessage = e.toString());
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _copyToClipboard() {
-    if (_generatedMarkdown.isEmpty) return;
-    ExportService.copyToClipboard(_generatedMarkdown);
-    _showSnack('Copied to clipboard');
-  }
-
-  void _downloadFile() {
-    if (_generatedMarkdown.isEmpty) return;
-    final success = ExportService.downloadMarkdownFile(
-      content: _generatedMarkdown,
-      repoOwner: _repoOwner,
-      repoName: _repoName,
-    );
-    if (success) {
-      _showSnack('Download started');
-    } else {
-      // Fallback on mobile — copy to clipboard instead.
-      ExportService.copyToClipboard(_generatedMarkdown);
-      _showSnack('File download is web-only. Copied to clipboard instead.');
-    }
-  }
-
-  void _onHistorySelect(HistoryEntry entry) {
-    Navigator.pop(context); // close the drawer
-    setState(() {
-      _urlController.text = entry.githubUrl;
-      _generatedMarkdown = entry.markdown;
-      _markdownController.text = entry.markdown;
-      _isPreview = true;
-      _repoOwner = entry.repoOwner;
-      _repoName = entry.repoName;
-      _errorMessage = null;
-      _selectedModeIndex = _modes.indexOf(entry.presentationMode).clamp(0, 2);
-    });
-  }
-
   void _showSnack(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -163,41 +69,23 @@ class _MobileScreenState extends State<MobileScreen>
   void _showSettingsDialog() {
     SettingsDialog.show(
       context,
-      initialToken: _githubToken,
-      onTokenSaved: (token) => setState(() => _githubToken = token),
+      initialToken: _controller.githubToken,
+      onTokenSaved: _controller.updateToken,
     );
   }
-
-  Future<void> _createPullRequest() async {
-    if (_generatedMarkdown.isEmpty) return;
-    if (_githubToken.isEmpty) {
-      _showSnack('Please set a GitHub Token in settings first');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      final prUrl = await ApiService.createPullRequest(
-        githubUrl: _urlController.text,
-        githubToken: _githubToken,
-        markdown: _generatedMarkdown,
-      );
-      _showSnack('PR Created Successfully!');
-      final uri = Uri.parse(prUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
-    } catch (e) {
-      setState(() => _errorMessage = 'Failed to create PR: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  
+  void _onHistorySelect(HistoryEntry entry) {
+    Navigator.pop(context); // close the drawer
+    _controller.onHistorySelect(entry);
+    setState(() => _isPreview = true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final hasOutput = _generatedMarkdown.isNotEmpty;
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, child) {
+        final hasOutput = _controller.generatedMarkdown.isNotEmpty;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -224,7 +112,7 @@ class _MobileScreenState extends State<MobileScreen>
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
         actions: [
-          if (hasOutput && _repoOwner.isNotEmpty && _repoName.isNotEmpty)
+          if (hasOutput && _controller.repoOwner.isNotEmpty && _controller.repoName.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.local_police),
               tooltip: 'Add Badges',
@@ -232,19 +120,10 @@ class _MobileScreenState extends State<MobileScreen>
               onPressed: () {
                 BadgeSelector.show(
                   context,
-                  repoOwner: _repoOwner,
-                  repoName: _repoName,
-                  initialSelectedKeys: _selectedBadges,
-                  onApply: (selectedKeys, markdownToInject) {
-                    setState(() {
-                      _selectedBadges = selectedKeys;
-                      if (markdownToInject.isNotEmpty) {
-                        _generatedMarkdown =
-                            markdownToInject + '\n\n' + _generatedMarkdown;
-                        _markdownController.text = _generatedMarkdown;
-                      }
-                    });
-                  },
+                  repoOwner: _controller.repoOwner,
+                  repoName: _controller.repoName,
+                  initialSelectedKeys: _controller.selectedBadges,
+                  onApply: _controller.applyBadges,
                 );
               },
             ),
@@ -269,17 +148,17 @@ class _MobileScreenState extends State<MobileScreen>
             IconButton(
               icon: const Icon(Icons.copy, size: 20),
               tooltip: 'Copy markdown',
-              onPressed: _copyToClipboard,
+              onPressed: () => _controller.copyToClipboard(_showSnack),
             ),
             IconButton(
               icon: const Icon(Icons.merge_type, size: 20),
               tooltip: 'Push to GitHub (Create PR)',
-              onPressed: _createPullRequest,
+              onPressed: () => _controller.createPullRequest(_showSnack),
             ),
             IconButton(
               icon: const Icon(Icons.download, size: 20),
               tooltip: 'Download .md',
-              onPressed: _downloadFile,
+              onPressed: () => _controller.downloadFile(_showSnack),
             ),
           ],
         ],
@@ -300,15 +179,21 @@ class _MobileScreenState extends State<MobileScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── URL Input ──
-              UrlInputField(controller: _urlController, onSubmitted: _generate),
+              UrlInputField(
+                controller: _controller.urlController, 
+                onSubmitted: () {
+                  _controller.generate(() => _historyKey.currentState?.refresh());
+                  setState(() => _isPreview = true);
+                }
+              ),
 
               const SizedBox(height: 18),
 
               // ── Mode Selector ──
               ModeSelector(
-                modes: _modes,
-                selectedIndex: _selectedModeIndex,
-                onModeSelected: (i) => setState(() => _selectedModeIndex = i),
+                modes: _controller.modes,
+                selectedIndex: _controller.selectedModeIndex,
+                onModeSelected: _controller.setModeIndex,
                 isExpanded: true,
                 borderRadius: 14,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -319,8 +204,11 @@ class _MobileScreenState extends State<MobileScreen>
 
               // ── Generate Button ──
               GenerateButton(
-                isLoading: _isLoading,
-                onPressed: _generate,
+                isLoading: _controller.isLoading,
+                onPressed: () {
+                  _controller.generate(() => _historyKey.currentState?.refresh());
+                  setState(() => _isPreview = true);
+                },
                 height: 52,
                 fontSize: 15,
                 borderRadius: 14,
@@ -328,7 +216,7 @@ class _MobileScreenState extends State<MobileScreen>
               ),
 
               // ── Error Message ──
-              if (_errorMessage != null) ...[
+              if (_controller.errorMessage != null) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -338,11 +226,36 @@ class _MobileScreenState extends State<MobileScreen>
                     border: Border.all(color: Colors.red.withAlpha(80)),
                   ),
                   child: Text(
-                    _errorMessage!,
+                    _controller.errorMessage!,
                     style: const TextStyle(
                       color: Colors.redAccent,
                       fontSize: 13,
                     ),
+                  ),
+                ),
+              ],
+              
+              // ── Mock Fallback Banner ──
+              if (_controller.isMock) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(25),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.withAlpha(80)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'GitHub API limit reached. Using mock repository data as a fallback.',
+                          style: TextStyle(color: Colors.orangeAccent, fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -447,7 +360,7 @@ class _MobileScreenState extends State<MobileScreen>
                           borderRadius: BorderRadius.circular(14),
                           child: _isPreview
                               ? Markdown(
-                                  data: _generatedMarkdown,
+                                  data: _controller.generatedMarkdown,
                                   padding: const EdgeInsets.all(16),
                                   styleSheet:
                                       MarkdownStyleSheet.fromTheme(
@@ -545,14 +458,10 @@ class _MobileScreenState extends State<MobileScreen>
                                       ),
                                 )
                               : TextField(
-                                  controller: _markdownController,
+                                  controller: _controller.markdownController,
                                   maxLines: null,
                                   expands: true,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      _generatedMarkdown = val;
-                                    });
-                                  },
+                                  onChanged: _controller.updateMarkdown,
                                   style: const TextStyle(
                                     fontFamily: 'monospace',
                                     fontSize: 13,
@@ -571,6 +480,8 @@ class _MobileScreenState extends State<MobileScreen>
           ),
         ),
       ),
+    );
+    },
     );
   }
 }

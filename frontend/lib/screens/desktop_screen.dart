@@ -21,6 +21,7 @@ import '../widgets/shared/url_input_field.dart';
 import '../widgets/shared/mode_selector.dart';
 import '../widgets/shared/generate_button.dart';
 import '../widgets/shared/settings_dialog.dart';
+import '../controllers/readme_controller.dart';
 
 class DesktopScreen extends StatefulWidget {
   const DesktopScreen({super.key});
@@ -31,156 +32,30 @@ class DesktopScreen extends StatefulWidget {
 
 class _DesktopScreenState extends State<DesktopScreen>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _markdownController = TextEditingController();
-  final GlobalKey<HistoryPanelState> _historyKey =
-      GlobalKey<HistoryPanelState>();
-  final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
-  int _selectedModeIndex = 0;
-  String _githubToken = '';
+  final ReadmeController _controller = ReadmeController();
+  final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
 
-  List<String> _selectedBadges = [];
-
-  bool _isLoading = false;
   bool _historyOpen = false;
-  String _generatedMarkdown = '';
-  String _repoOwner = '';
-  String _repoName = '';
-  String? _errorMessage;
-  String _repoLabel = '';
-
   late AnimationController _shimmerController;
 
   @override
   void initState() {
     super.initState();
-    _loadToken();
     _shimmerController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
   }
 
-  Future<void> _loadToken() async {
-    final storage = const FlutterSecureStorage();
-    final token = await storage.read(key: 'github_token');
-    setState(() {
-      _githubToken = token ?? '';
-    });
-  }
-
   @override
   void dispose() {
-    _urlController.dispose();
-    _markdownController.dispose();
+    _controller.dispose();
     _shimmerController.dispose();
     super.dispose();
   }
 
-  Future<void> _generate() async {
-    final url = _urlController.text.trim();
-    if (url.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a GitHub repository URL.');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _generatedMarkdown = '';
-      _repoLabel = '';
-      _selectedBadges = [];
-    });
-
-    try {
-      final result = await ApiService.generateReadme(
-        githubUrl: url,
-        presentationMode: _modes[_selectedModeIndex],
-        githubToken: _githubToken,
-      );
-      setState(() {
-        _generatedMarkdown = result.markdown;
-        _markdownController.text = result.markdown;
-        _repoOwner = result.repoOwner;
-        _repoName = result.repoName;
-        _repoLabel = '${result.repoOwner}/${result.repoName}';
-      });
-      // Refresh history after generation.
-      _historyKey.currentState?.refresh();
-    } catch (e) {
-      setState(() => _errorMessage = e.toString());
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _copyToClipboard() {
-    if (_generatedMarkdown.isEmpty) return;
-    ExportService.copyToClipboard(_generatedMarkdown);
-    _showSnack('Markdown copied to clipboard');
-  }
-
-  void _downloadFile() {
-    if (_generatedMarkdown.isEmpty) return;
-    final success = ExportService.downloadMarkdownFile(
-      content: _generatedMarkdown,
-      repoOwner: _repoOwner,
-      repoName: _repoName,
-    );
-    if (!success) {
-      _showSnack('Downloading files is not supported on this platform');
-    }
-  }
-
-  void _showSettingsDialog() {
-    SettingsDialog.show(
-      context,
-      initialToken: _githubToken,
-      onTokenSaved: (token) => setState(() => _githubToken = token),
-    );
-  }
-
-  Future<void> _createPullRequest() async {
-    if (_generatedMarkdown.isEmpty) return;
-    if (_githubToken.isEmpty) {
-      _showSnack('Please set a GitHub Token in settings first');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      final prUrl = await ApiService.createPullRequest(
-        githubUrl: _urlController.text,
-        githubToken: _githubToken,
-        markdown:
-            _generatedMarkdown, // Uses the latest edited markdown from the text field
-      );
-      _showSnack('PR Created Successfully!');
-      final uri = Uri.parse(prUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      }
-    } catch (e) {
-      setState(() => _errorMessage = 'Failed to create PR: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _onHistorySelect(HistoryEntry entry) {
-    setState(() {
-      _urlController.text = entry.githubUrl;
-      _generatedMarkdown = entry.markdown;
-      _markdownController.text = entry.markdown;
-      _repoOwner = entry.repoOwner;
-      _repoName = entry.repoName;
-      _repoLabel = '${entry.repoOwner}/${entry.repoName}';
-      _errorMessage = null;
-      _selectedModeIndex = _modes.indexOf(entry.presentationMode).clamp(0, 2);
-    });
-  }
-
   void _showSnack(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -193,10 +68,18 @@ class _DesktopScreenState extends State<DesktopScreen>
     );
   }
 
+  void _showSettingsDialog() {
+    SettingsDialog.show(
+      context,
+      initialToken: _controller.githubToken,
+      onTokenSaved: _controller.updateToken,
+    );
+  }
+
   // ── Build helpers ──────────────────────────────────────────────────────
 
   Widget _buildToolbar() {
-    final hasOutput = _generatedMarkdown.isNotEmpty;
+    final hasOutput = _controller.generatedMarkdown.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -250,8 +133,8 @@ class _DesktopScreenState extends State<DesktopScreen>
           // URL input
           Expanded(
             child: UrlInputField(
-              controller: _urlController,
-              onSubmitted: _generate,
+              controller: _controller.urlController,
+              onSubmitted: () => _controller.generate(() => _historyKey.currentState?.refresh()),
               height: 42,
               fontSize: 13,
               borderRadius: 10,
@@ -263,9 +146,9 @@ class _DesktopScreenState extends State<DesktopScreen>
 
           // Mode selector
           ModeSelector(
-            modes: _modes,
-            selectedIndex: _selectedModeIndex,
-            onModeSelected: (i) => setState(() => _selectedModeIndex = i),
+            modes: _controller.modes,
+            selectedIndex: _controller.selectedModeIndex,
+            onModeSelected: _controller.setModeIndex,
             borderRadius: 10,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             fontSize: 12,
@@ -274,7 +157,7 @@ class _DesktopScreenState extends State<DesktopScreen>
           const SizedBox(width: 12),
 
           // Badge button
-          if (hasOutput && _repoOwner.isNotEmpty && _repoName.isNotEmpty)
+          if (hasOutput && _controller.repoOwner.isNotEmpty && _controller.repoName.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: _ToolbarIconButton(
@@ -283,19 +166,10 @@ class _DesktopScreenState extends State<DesktopScreen>
                 onPressed: () {
                   BadgeSelector.show(
                     context,
-                    repoOwner: _repoOwner,
-                    repoName: _repoName,
-                    initialSelectedKeys: _selectedBadges,
-                    onApply: (selectedKeys, markdownToInject) {
-                      setState(() {
-                        _selectedBadges = selectedKeys;
-                        if (markdownToInject.isNotEmpty) {
-                          _generatedMarkdown =
-                              markdownToInject + '\n\n' + _generatedMarkdown;
-                          _markdownController.text = _generatedMarkdown;
-                        }
-                      });
-                    },
+                    repoOwner: _controller.repoOwner,
+                    repoName: _controller.repoName,
+                    initialSelectedKeys: _controller.selectedBadges,
+                    onApply: _controller.applyBadges,
                   );
                 },
               ),
@@ -303,8 +177,8 @@ class _DesktopScreenState extends State<DesktopScreen>
 
           // Generate button
           GenerateButton(
-            isLoading: _isLoading,
-            onPressed: _generate,
+            isLoading: _controller.isLoading,
+            onPressed: () => _controller.generate(() => _historyKey.currentState?.refresh()),
             height: 42,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             fontSize: 14,
@@ -323,19 +197,19 @@ class _DesktopScreenState extends State<DesktopScreen>
             _ToolbarIconButton(
               icon: Icons.copy,
               tooltip: 'Copy markdown',
-              onPressed: _copyToClipboard,
+              onPressed: () => _controller.copyToClipboard(_showSnack),
             ),
             const SizedBox(width: 4),
             _ToolbarIconButton(
               icon: Icons.merge_type,
               tooltip: 'Push to GitHub (Create PR)',
-              onPressed: _createPullRequest,
+              onPressed: () => _controller.createPullRequest(_showSnack),
             ),
             const SizedBox(width: 4),
             _ToolbarIconButton(
               icon: Icons.download,
               tooltip: 'Download .md file',
-              onPressed: _downloadFile,
+              onPressed: () => _controller.downloadFile(_showSnack),
             ),
           ],
         ],
@@ -391,7 +265,7 @@ class _DesktopScreenState extends State<DesktopScreen>
               letterSpacing: 0.4,
             ),
           ),
-          if (_repoLabel.isNotEmpty) ...[
+          if (_controller.repoLabel.isNotEmpty) ...[
             const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -400,7 +274,7 @@ class _DesktopScreenState extends State<DesktopScreen>
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                _repoLabel,
+                _controller.repoLabel,
                 style: const TextStyle(
                   color: Color(0xFF8B5CF6),
                   fontSize: 11,
@@ -420,20 +294,16 @@ class _DesktopScreenState extends State<DesktopScreen>
       children: [
         _buildPaneHeader('Markdown Source', Icons.code),
         Expanded(
-          child: _generatedMarkdown.isEmpty
+          child: _controller.generatedMarkdown.isEmpty
               ? _buildEmptyState(
                   'Raw markdown will\nappear here',
                   Icons.code_outlined,
                 )
               : TextField(
-                  controller: _markdownController,
+                  controller: _controller.markdownController,
                   maxLines: null,
                   expands: true,
-                  onChanged: (val) {
-                    setState(() {
-                      _generatedMarkdown = val;
-                    });
-                  },
+                  onChanged: _controller.updateMarkdown,
                   style: const TextStyle(
                     fontFamily: 'Cascadia Code, Fira Code, monospace',
                     fontSize: 13,
@@ -456,13 +326,13 @@ class _DesktopScreenState extends State<DesktopScreen>
       children: [
         _buildPaneHeader('Live Preview', Icons.visibility),
         Expanded(
-          child: _generatedMarkdown.isEmpty
+          child: _controller.generatedMarkdown.isEmpty
               ? _buildEmptyState(
                   'Rendered preview will\nappear here',
                   Icons.preview_outlined,
                 )
               : Markdown(
-                  data: _generatedMarkdown,
+                  data: _controller.generatedMarkdown,
                   padding: const EdgeInsets.all(24),
                   styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
                       .copyWith(
@@ -568,48 +438,70 @@ class _DesktopScreenState extends State<DesktopScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          // ── Top toolbar ──
-          _buildToolbar(),
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, child) {
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Column(
+            children: [
+              // ── Top toolbar ──
+              _buildToolbar(),
 
-          // ── Error banner ──
-          if (_errorMessage != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 10),
-              color: Colors.red.withAlpha(20),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    color: Colors.redAccent,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(
+              // ── Error banner ──
+              if (_controller.errorMessage != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 10),
+                  color: Colors.red.withAlpha(20),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
                         color: Colors.redAccent,
-                        fontSize: 13,
+                        size: 18,
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _controller.errorMessage!,
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          size: 16,
+                          color: Colors.redAccent,
+                        ),
+                        onPressed: _controller.clearError,
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: Colors.redAccent,
-                    ),
-                    onPressed: () => setState(() => _errorMessage = null),
+                ),
+              
+              // ── Mock Fallback Banner ──
+              if (_controller.isMock)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 10),
+                  color: Colors.orange.withAlpha(20),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 18),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'GitHub API limit reached. Using mock repository data as a fallback.',
+                          style: TextStyle(color: Colors.orangeAccent, fontSize: 13),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
           // ── Main content area ──
           Expanded(
@@ -640,7 +532,7 @@ class _DesktopScreenState extends State<DesktopScreen>
                             borderRadius: BorderRadius.circular(14),
                             child: HistoryPanel(
                               key: _historyKey,
-                              onSelect: _onHistorySelect,
+                              onSelect: _controller.onHistorySelect,
                             ),
                           ),
                         )

@@ -4,6 +4,8 @@ library;
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/history_entry.dart';
 
 /// Response model returned by the API.
@@ -12,12 +14,14 @@ class ReadmeResult {
   final String repoOwner;
   final String repoName;
   final String presentationMode;
+  final bool isMock;
 
   const ReadmeResult({
     required this.markdown,
     required this.repoOwner,
     required this.repoName,
     required this.presentationMode,
+    required this.isMock,
   });
 
   factory ReadmeResult.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,7 @@ class ReadmeResult {
       repoOwner: json['repo_owner'] as String,
       repoName: json['repo_name'] as String,
       presentationMode: json['presentation_mode'] as String,
+      isMock: json['is_mock'] as bool? ?? false,
     );
   }
 }
@@ -53,6 +58,11 @@ class ApiService {
     return 'https://readmearchitect.onrender.com';
   }
 
+  static Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    'X-Session-ID': _sessionId,
+  };
+
   /// Generate a README by sending the [githubUrl] and [presentationMode]
   /// to the backend.
   ///
@@ -74,7 +84,7 @@ class ApiService {
 
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode(bodyData),
     );
 
@@ -86,12 +96,25 @@ class ApiService {
     }
   }
 
+  static String _sessionId = 'default';
+
+  /// Initialize the session ID. Call this on app startup.
+  static Future<void> initSession() async {
+    const storage = FlutterSecureStorage();
+    String? sid = await storage.read(key: 'session_id');
+    if (sid == null) {
+      sid = const Uuid().v4();
+      await storage.write(key: 'session_id', value: sid);
+    }
+    _sessionId = sid;
+  }
+
   // ── History API ────────────────────────────────────────────────────────
 
   /// Fetch all history entries (newest first).
   static Future<List<HistoryEntry>> getHistory() async {
     final uri = Uri.parse('$_baseUrl/api/history');
-    final response = await http.get(uri);
+    final response = await http.get(uri, headers: {'X-Session-ID': _sessionId});
 
     if (response.statusCode == 200) {
       final list = jsonDecode(response.body) as List<dynamic>;
@@ -106,7 +129,7 @@ class ApiService {
   /// Delete a single history entry by [entryId].
   static Future<void> deleteHistoryEntry(int entryId) async {
     final uri = Uri.parse('$_baseUrl/api/history/$entryId');
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: {'X-Session-ID': _sessionId});
 
     if (response.statusCode != 200) {
       throw Exception(_extractError(response));
@@ -116,7 +139,7 @@ class ApiService {
   /// Clear all history entries.
   static Future<void> clearHistory() async {
     final uri = Uri.parse('$_baseUrl/api/history');
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: {'X-Session-ID': _sessionId});
 
     if (response.statusCode != 200) {
       throw Exception(_extractError(response));
@@ -132,7 +155,7 @@ class ApiService {
     final uri = Uri.parse('$_baseUrl/api/create-pr');
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
       body: jsonEncode({
         'github_url': githubUrl,
         'github_token': githubToken,
