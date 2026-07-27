@@ -145,6 +145,7 @@ While the core experience is highly polished, the following features are planned
 |-----------|---------|
 | **Flutter 3.x** | Cross-platform UI toolkit (Web, Desktop, Mobile) |
 | **flutter_markdown** | Live rendering of AI-generated markdown strings with custom styled sheets |
+| **flutter_secure_storage** | Native Keystore/Keychain encryption for storing GitHub Personal Access Tokens (PAT) securely |
 | **universal_html** | Web-based file downloads (Blob + AnchorElement) and browser user-agent detection for platform routing |
 | **http** | HTTP client connecting to the FastAPI backend |
 | **Linear-style UI** | Custom built design system — deep `#0D0D1A` backgrounds, `#6C63FF` accent gradients, glowing borders, smooth fade transitions |
