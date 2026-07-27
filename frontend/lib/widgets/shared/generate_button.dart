@@ -29,22 +29,22 @@ class GenerateButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: Theme.of(context).colorScheme.onSurface,
+          foregroundColor: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(borderRadius),
           ),
           padding: padding,
-          elevation: isLoading ? 0 : 4,
-          shadowColor: Theme.of(context).colorScheme.primary.withAlpha(100),
+          elevation: isLoading ? 0 : 8,
+          shadowColor: Theme.of(context).colorScheme.onSurface.withAlpha(40),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
+                  strokeWidth: 2.5,
+                  color: Theme.of(context).colorScheme.surface,
                 ),
               )
             : Row(
