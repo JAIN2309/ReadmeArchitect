@@ -601,6 +601,8 @@ class _DesktopScreenState extends State<DesktopScreen>
         ],
       ),
     );
+      },
+    );
   }
 }
 
