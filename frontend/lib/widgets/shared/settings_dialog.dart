@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SettingsDialog extends StatefulWidget {
   final String initialToken;
@@ -31,7 +30,6 @@ class SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<SettingsDialog> {
   late TextEditingController _tokenController;
-  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -92,9 +90,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
           style: ElevatedButton.styleFrom(
             backgroundColor: Theme.of(context).colorScheme.primary,
           ),
-          onPressed: () async {
+          onPressed: () {
             final token = _tokenController.text.trim();
-            await _storage.write(key: 'github_token', value: token);
             widget.onTokenSaved(token);
             if (!context.mounted) return;
             Navigator.pop(context);

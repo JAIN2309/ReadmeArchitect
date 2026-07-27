@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/history_entry.dart';
 
 /// Response model returned by the API.
@@ -100,11 +101,21 @@ class ApiService {
 
   /// Initialize the session ID. Call this on app startup.
   static Future<void> initSession() async {
-    const storage = FlutterSecureStorage();
-    String? sid = await storage.read(key: 'session_id');
-    if (sid == null) {
-      sid = const Uuid().v4();
-      await storage.write(key: 'session_id', value: sid);
+    String? sid;
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      sid = prefs.getString('session_id');
+      if (sid == null) {
+        sid = const Uuid().v4();
+        await prefs.setString('session_id', sid);
+      }
+    } else {
+      const storage = FlutterSecureStorage();
+      sid = await storage.read(key: 'session_id');
+      if (sid == null) {
+        sid = const Uuid().v4();
+        await storage.write(key: 'session_id', value: sid);
+      }
     }
     _sessionId = sid;
   }

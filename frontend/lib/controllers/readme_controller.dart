@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/history_entry.dart';
 import '../services/api_service.dart';
@@ -27,14 +29,26 @@ class ReadmeController extends ChangeNotifier {
   }
 
   Future<void> _loadToken() async {
-    const storage = FlutterSecureStorage();
-    final token = await storage.read(key: 'github_token');
-    githubToken = token ?? '';
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      githubToken = prefs.getString('github_token') ?? '';
+    } else {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'github_token');
+      githubToken = token ?? '';
+    }
     notifyListeners();
   }
 
-  void updateToken(String token) {
+  void updateToken(String token) async {
     githubToken = token;
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('github_token', token);
+    } else {
+      const storage = FlutterSecureStorage();
+      await storage.write(key: 'github_token', value: token);
+    }
     notifyListeners();
   }
 
