@@ -17,6 +17,10 @@ import '../services/export_service.dart';
 import '../widgets/history_panel.dart';
 import '../widgets/badge_selector.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/shared/url_input_field.dart';
+import '../widgets/shared/mode_selector.dart';
+import '../widgets/shared/generate_button.dart';
+import '../widgets/shared/settings_dialog.dart';
 
 class DesktopScreen extends StatefulWidget {
   const DesktopScreen({super.key});
@@ -29,7 +33,8 @@ class _DesktopScreenState extends State<DesktopScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _urlController = TextEditingController();
   final TextEditingController _markdownController = TextEditingController();
-  final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
+  final GlobalKey<HistoryPanelState> _historyKey =
+      GlobalKey<HistoryPanelState>();
   final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
   int _selectedModeIndex = 0;
   String _githubToken = '';
@@ -127,49 +132,10 @@ class _DesktopScreenState extends State<DesktopScreen>
   }
 
   void _showSettingsDialog() {
-    final TextEditingController tokenController = TextEditingController(text: _githubToken);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        title: Text('Settings', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-        content: TextField(
-          controller: tokenController,
-          obscureText: true,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: InputDecoration(
-            labelText: 'GitHub Personal Access Token',
-            labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
-            hintText: 'ghp_...',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(50)),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(20)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('github_token', tokenController.text.trim());
-              setState(() {
-                _githubToken = tokenController.text.trim();
-              });
-              if (mounted) Navigator.pop(context);
-              _showSnack('Settings saved');
-            },
-            child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-          ),
-        ],
-      ),
+    SettingsDialog.show(
+      context,
+      initialToken: _githubToken,
+      onTokenSaved: (token) => setState(() => _githubToken = token),
     );
   }
 
@@ -185,7 +151,8 @@ class _DesktopScreenState extends State<DesktopScreen>
       final prUrl = await ApiService.createPullRequest(
         githubUrl: _urlController.text,
         githubToken: _githubToken,
-        markdown: _generatedMarkdown, // Uses the latest edited markdown from the text field
+        markdown:
+            _generatedMarkdown, // Uses the latest edited markdown from the text field
       );
       _showSnack('PR Created Successfully!');
       final uri = Uri.parse(prUrl);
@@ -234,9 +201,7 @@ class _DesktopScreenState extends State<DesktopScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: const BoxDecoration(
         color: Color(0xFF14142B),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFF2A2A4A), width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFF2A2A4A), width: 1)),
       ),
       child: Row(
         children: [
@@ -251,7 +216,9 @@ class _DesktopScreenState extends State<DesktopScreen>
 
           // Theme toggle
           _ToolbarIconButton(
-            icon: ThemeProvider.themeModeNotifier.value == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+            icon: ThemeProvider.themeModeNotifier.value == ThemeMode.dark
+                ? Icons.light_mode
+                : Icons.dark_mode,
             tooltip: 'Toggle Theme',
             onPressed: () {
               ThemeProvider.toggleTheme();
@@ -281,83 +248,26 @@ class _DesktopScreenState extends State<DesktopScreen>
 
           // URL input
           Expanded(
-            child: SizedBox(
+            child: UrlInputField(
+              controller: _urlController,
+              onSubmitted: _generate,
               height: 42,
-              child: TextField(
-                controller: _urlController,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                onSubmitted: (_) => _generate(),
-                decoration: InputDecoration(
-                  hintText: 'https://github.com/owner/repo',
-                  hintStyle: TextStyle(color: Colors.white.withAlpha(70)),
-                  prefixIcon: const Icon(
-                    Icons.link,
-                    color: Colors.purpleAccent,
-                    size: 18,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF1E1E3F),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: Colors.purpleAccent,
-                      width: 1.5,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
-              ),
+              fontSize: 13,
+              borderRadius: 10,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
             ),
           ),
 
           const SizedBox(width: 16),
 
           // Mode selector
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E3F),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.all(3),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(_modes.length, (i) {
-                final isSelected = _selectedModeIndex == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedModeIndex = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 9,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: isSelected
-                          ? const LinearGradient(
-                              colors: [Colors.purpleAccent, Color(0xFF8B5CF6)],
-                            )
-                          : null,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _modes[i],
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.white.withAlpha(140),
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
+          ModeSelector(
+            modes: _modes,
+            selectedIndex: _selectedModeIndex,
+            onModeSelected: (i) => setState(() => _selectedModeIndex = i),
+            borderRadius: 10,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            fontSize: 12,
           ),
 
           const SizedBox(width: 12),
@@ -379,7 +289,8 @@ class _DesktopScreenState extends State<DesktopScreen>
                       setState(() {
                         _selectedBadges = selectedKeys;
                         if (markdownToInject.isNotEmpty) {
-                          _generatedMarkdown = markdownToInject + '\n\n' + _generatedMarkdown;
+                          _generatedMarkdown =
+                              markdownToInject + '\n\n' + _generatedMarkdown;
                           _markdownController.text = _generatedMarkdown;
                         }
                       });
@@ -390,38 +301,13 @@ class _DesktopScreenState extends State<DesktopScreen>
             ),
 
           // Generate button
-          SizedBox(
+          GenerateButton(
+            isLoading: _isLoading,
+            onPressed: _generate,
             height: 42,
-            child: ElevatedButton.icon(
-              onPressed: _isLoading ? null : _generate,
-              icon: _isLoading
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    )
-                  : const Icon(Icons.bolt, size: 16),
-              label: Text(
-                _isLoading ? 'Generating…' : 'Generate',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                disabledBackgroundColor: const Color(0xFF3A3670),
-                foregroundColor: Theme.of(context).colorScheme.onSurface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-              ),
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            fontSize: 14,
+            borderRadius: 10,
           ),
 
           // Action buttons (appear when output exists)
@@ -461,7 +347,11 @@ class _DesktopScreenState extends State<DesktopScreen>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 52, color: Theme.of(context).colorScheme.onSurface.withAlpha(40)),
+          Icon(
+            icon,
+            size: 52,
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(40),
+          ),
           const SizedBox(height: 14),
           Text(
             label,
@@ -482,7 +372,9 @@ class _DesktopScreenState extends State<DesktopScreen>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(15)),
+          bottom: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
+          ),
         ),
       ),
       child: Row(
@@ -571,83 +463,102 @@ class _DesktopScreenState extends State<DesktopScreen>
               : Markdown(
                   data: _generatedMarkdown,
                   padding: const EdgeInsets.all(24),
-                  styleSheet: MarkdownStyleSheet.fromTheme(
-                    Theme.of(context),
-                  ).copyWith(
-                    p: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
-                      fontSize: 14.5,
-                      height: 1.6,
-                      letterSpacing: 0.2,
-                    ),
-                    h1: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.5,
-                    ),
-                    h2: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 19,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.3,
-                    ),
-                    h3: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    code: TextStyle(
-                      backgroundColor: Theme.of(context).colorScheme.onSurface.withAlpha(12),
-                      color: const Color(0xFFA5B4FC),
-                      fontSize: 13,
-                      fontFamily: 'monospace',
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: const Color(0xFF141417),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(12)),
-                    ),
-                    listBullet: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                      fontSize: 14,
-                    ),
-                    tableHead: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                    tableBody: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
-                      fontSize: 13,
-                    ),
-                    tableBorder: TableBorder.all(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(12),
-                      width: 1,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    blockquoteDecoration: BoxDecoration(
-                      color: Colors.transparent,
-                      border: Border(
-                        left: BorderSide(
-                          color: Theme.of(context).colorScheme.onSurface.withAlpha(30),
-                          width: 3,
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                      .copyWith(
+                        p: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(200),
+                          fontSize: 14.5,
+                          height: 1.6,
+                          letterSpacing: 0.2,
                         ),
-                      ),
-                    ),
-                    blockquote: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                      fontStyle: FontStyle.italic,
-                    ),
-                    horizontalRuleDecoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: Theme.of(context).colorScheme.onSurface.withAlpha(12),
+                        h1: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.5,
+                        ),
+                        h2: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.3,
+                        ),
+                        h3: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        code: TextStyle(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(12),
+                          color: const Color(0xFFA5B4FC),
+                          fontSize: 13,
+                          fontFamily: 'monospace',
+                        ),
+                        codeblockDecoration: BoxDecoration(
+                          color: const Color(0xFF141417),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(12),
+                          ),
+                        ),
+                        listBullet: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(150),
+                          fontSize: 14,
+                        ),
+                        tableHead: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                        tableBody: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(200),
+                          fontSize: 13,
+                        ),
+                        tableBorder: TableBorder.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(12),
                           width: 1,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        blockquoteDecoration: BoxDecoration(
+                          color: Colors.transparent,
+                          border: Border(
+                            left: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withAlpha(30),
+                              width: 3,
+                            ),
+                          ),
+                        ),
+                        blockquote: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(150),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        horizontalRuleDecoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withAlpha(12),
+                              width: 1,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
                 ),
         ),
       ],
@@ -672,7 +583,11 @@ class _DesktopScreenState extends State<DesktopScreen>
               color: Colors.red.withAlpha(20),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -684,7 +599,11 @@ class _DesktopScreenState extends State<DesktopScreen>
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 16, color: Colors.redAccent),
+                    icon: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.redAccent,
+                    ),
                     onPressed: () => setState(() => _errorMessage = null),
                   ),
                 ],
@@ -710,7 +629,11 @@ class _DesktopScreenState extends State<DesktopScreen>
                           decoration: BoxDecoration(
                             color: Theme.of(context).scaffoldBackgroundColor,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(10)),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withAlpha(10),
+                            ),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(14),
@@ -735,7 +658,11 @@ class _DesktopScreenState extends State<DesktopScreen>
                     decoration: BoxDecoration(
                       color: const Color(0xFF12122A),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(10)),
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(10),
+                      ),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
@@ -763,7 +690,11 @@ class _DesktopScreenState extends State<DesktopScreen>
                     decoration: BoxDecoration(
                       color: const Color(0xFF12122A),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(10)),
+                      border: Border.all(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(10),
+                      ),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),

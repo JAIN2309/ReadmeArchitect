@@ -15,6 +15,10 @@ import '../services/export_service.dart';
 import '../widgets/history_panel.dart';
 import '../widgets/badge_selector.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/shared/url_input_field.dart';
+import '../widgets/shared/mode_selector.dart';
+import '../widgets/shared/generate_button.dart';
+import '../widgets/shared/settings_dialog.dart';
 
 class MobileScreen extends StatefulWidget {
   const MobileScreen({super.key});
@@ -27,7 +31,8 @@ class _MobileScreenState extends State<MobileScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _urlController = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
+  final GlobalKey<HistoryPanelState> _historyKey =
+      GlobalKey<HistoryPanelState>();
   final List<String> _modes = ['Basic', 'Advanced', 'Professional'];
   int _selectedModeIndex = 0;
   String _githubToken = '';
@@ -155,49 +160,10 @@ class _MobileScreenState extends State<MobileScreen>
   }
 
   void _showSettingsDialog() {
-    final TextEditingController tokenController = TextEditingController(text: _githubToken);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        title: Text('Settings', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-        content: TextField(
-          controller: tokenController,
-          obscureText: true,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: InputDecoration(
-            labelText: 'GitHub Personal Access Token',
-            labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(150)),
-            hintText: 'ghp_...',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(50)),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(20)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(150))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.primary),
-            onPressed: () async {
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.setString('github_token', tokenController.text.trim());
-              setState(() {
-                _githubToken = tokenController.text.trim();
-              });
-              if (mounted) Navigator.pop(context);
-              _showSnack('Settings saved');
-            },
-            child: Text('Save', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-          ),
-        ],
-      ),
+    SettingsDialog.show(
+      context,
+      initialToken: _githubToken,
+      onTokenSaved: (token) => setState(() => _githubToken = token),
     );
   }
 
@@ -249,7 +215,10 @@ class _MobileScreenState extends State<MobileScreen>
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: Icon(Icons.history, color: Theme.of(context).colorScheme.primary),
+          icon: Icon(
+            Icons.history,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           tooltip: 'History',
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
         ),
@@ -269,7 +238,8 @@ class _MobileScreenState extends State<MobileScreen>
                     setState(() {
                       _selectedBadges = selectedKeys;
                       if (markdownToInject.isNotEmpty) {
-                        _generatedMarkdown = markdownToInject + '\n\n' + _generatedMarkdown;
+                        _generatedMarkdown =
+                            markdownToInject + '\n\n' + _generatedMarkdown;
                         _markdownController.text = _generatedMarkdown;
                       }
                     });
@@ -278,7 +248,11 @@ class _MobileScreenState extends State<MobileScreen>
               },
             ),
           IconButton(
-            icon: Icon(ThemeProvider.themeModeNotifier.value == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode),
+            icon: Icon(
+              ThemeProvider.themeModeNotifier.value == ThemeMode.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
             tooltip: 'Toggle Theme',
             onPressed: () {
               ThemeProvider.toggleTheme();
@@ -314,10 +288,7 @@ class _MobileScreenState extends State<MobileScreen>
       drawer: Drawer(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
-          child: HistoryPanel(
-            key: _historyKey,
-            onSelect: _onHistorySelect,
-          ),
+          child: HistoryPanel(key: _historyKey, onSelect: _onHistorySelect),
         ),
       ),
 
@@ -328,122 +299,31 @@ class _MobileScreenState extends State<MobileScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── URL Input ──
-              TextField(
-                controller: _urlController,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'https://github.com/owner/repo',
-                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(90)),
-                  prefixIcon: Icon(Icons.link, color: Theme.of(context).colorScheme.primary),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-              ),
+              UrlInputField(controller: _urlController, onSubmitted: _generate),
 
               const SizedBox(height: 18),
 
               // ── Mode Selector ──
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: List.generate(_modes.length, (i) {
-                    final isSelected = _selectedModeIndex == i;
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedModeIndex = i),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            gradient: isSelected
-                                ? LinearGradient(
-                                    colors: [
-                                      Theme.of(context).colorScheme.primary,
-                                      Color(0xFF8B5CF6),
-                                    ],
-                                  )
-                                : null,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            _modes[i],
-                            style: TextStyle(
-                              color: isSelected
-                                  ? Theme.of(context).colorScheme.onSurface
-                                  : Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                              fontWeight: isSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
+              ModeSelector(
+                modes: _modes,
+                selectedIndex: _selectedModeIndex,
+                onModeSelected: (i) => setState(() => _selectedModeIndex = i),
+                isExpanded: true,
+                borderRadius: 14,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                fontSize: 13,
               ),
 
               const SizedBox(height: 18),
 
               // ── Generate Button ──
-              SizedBox(
+              GenerateButton(
+                isLoading: _isLoading,
+                onPressed: _generate,
                 height: 52,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _generate,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    disabledBackgroundColor: const Color(0xFF3A3670),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.auto_awesome, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Generate README',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
+                fontSize: 15,
+                borderRadius: 14,
+                icon: const Icon(Icons.auto_awesome, size: 20),
               ),
 
               // ── Error Message ──
@@ -458,7 +338,10 @@ class _MobileScreenState extends State<MobileScreen>
                   ),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.redAccent,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -475,19 +358,45 @@ class _MobileScreenState extends State<MobileScreen>
                       ElevatedButton(
                         onPressed: () => setState(() => _isPreview = false),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !_isPreview ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHigh,
+                          backgroundColor: !_isPreview
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHigh,
                           elevation: 0,
                         ),
-                        child: Text('Edit Raw', style: TextStyle(color: !_isPreview ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withAlpha(150))),
+                        child: Text(
+                          'Edit Raw',
+                          style: TextStyle(
+                            color: !_isPreview
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withAlpha(150),
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: () => setState(() => _isPreview = true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isPreview ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHigh,
+                          backgroundColor: _isPreview
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHigh,
                           elevation: 0,
                         ),
-                        child: Text('Preview', style: TextStyle(color: _isPreview ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withAlpha(150))),
+                        child: Text(
+                          'Preview',
+                          style: TextStyle(
+                            color: _isPreview
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withAlpha(150),
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -498,7 +407,9 @@ class _MobileScreenState extends State<MobileScreen>
                     color: Theme.of(context).colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(15),
                     ),
                   ),
                   child: !hasOutput
@@ -513,13 +424,17 @@ class _MobileScreenState extends State<MobileScreen>
                                 Icon(
                                   Icons.description_outlined,
                                   size: 48,
-                                  color: Theme.of(context).colorScheme.onSurface.withAlpha(60),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withAlpha(60),
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Your generated README will appear here',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withAlpha(80),
                                     fontSize: 13,
                                   ),
                                 ),
@@ -529,73 +444,104 @@ class _MobileScreenState extends State<MobileScreen>
                         )
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(14),
-                          child: _isPreview 
+                          child: _isPreview
                               ? Markdown(
                                   data: _generatedMarkdown,
                                   padding: const EdgeInsets.all(16),
-                                  styleSheet: MarkdownStyleSheet.fromTheme(
-                                    Theme.of(context),
-                                  ).copyWith(
-                                    p: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(200),
-                                      fontSize: 14.5,
-                                      height: 1.6,
-                                      letterSpacing: 0.2,
-                                    ),
-                                    h1: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: -0.5,
-                                    ),
-                                    h2: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: -0.3,
-                                    ),
-                                    h3: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    code: TextStyle(
-                                      backgroundColor: Theme.of(context).colorScheme.onSurface.withAlpha(12),
-                                      color: const Color(0xFFA5B4FC),
-                                      fontSize: 13,
-                                      fontFamily: 'monospace',
-                                    ),
-                                    codeblockDecoration: BoxDecoration(
-                                      color: const Color(0xFF141417),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(12)),
-                                    ),
-                                    listBullet: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                                      fontSize: 14,
-                                    ),
-                                    blockquoteDecoration: BoxDecoration(
-                                      color: Colors.transparent,
-                                      border: Border(
-                                        left: BorderSide(
-                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(30),
-                                          width: 3,
+                                  styleSheet:
+                                      MarkdownStyleSheet.fromTheme(
+                                        Theme.of(context),
+                                      ).copyWith(
+                                        p: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withAlpha(200),
+                                          fontSize: 14.5,
+                                          height: 1.6,
+                                          letterSpacing: 0.2,
+                                        ),
+                                        h1: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.5,
+                                        ),
+                                        h2: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.3,
+                                        ),
+                                        h3: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        code: TextStyle(
+                                          backgroundColor: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface.withAlpha(12),
+                                          color: const Color(0xFFA5B4FC),
+                                          fontSize: 13,
+                                          fontFamily: 'monospace',
+                                        ),
+                                        codeblockDecoration: BoxDecoration(
+                                          color: const Color(0xFF141417),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withAlpha(12),
+                                          ),
+                                        ),
+                                        listBullet: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withAlpha(150),
+                                          fontSize: 14,
+                                        ),
+                                        blockquoteDecoration: BoxDecoration(
+                                          color: Colors.transparent,
+                                          border: Border(
+                                            left: BorderSide(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withAlpha(30),
+                                              width: 3,
+                                            ),
+                                          ),
+                                        ),
+                                        blockquote: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withAlpha(150),
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                        horizontalRuleDecoration: BoxDecoration(
+                                          border: Border(
+                                            top: BorderSide(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface
+                                                  .withAlpha(12),
+                                              width: 1,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    blockquote: TextStyle(
-                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                    horizontalRuleDecoration: BoxDecoration(
-                                      border: Border(
-                                        top: BorderSide(
-                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(12),
-                                          width: 1,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
                                 )
                               : TextField(
                                   controller: _markdownController,

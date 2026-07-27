@@ -71,15 +71,14 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.6),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _titleController, curve: Curves.easeOutCubic),
-    );
-    _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _titleController, curve: Curves.easeIn),
-    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _titleController, curve: Curves.easeOutCubic),
+        );
+    _titleFade = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _titleController, curve: Curves.easeIn));
 
     // ── Subtitle: simple fade ──
     _subtitleController = AnimationController(
@@ -145,7 +144,8 @@ class _SplashScreenState extends State<SplashScreen>
   void _navigateToHome() {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const OnboardingScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
@@ -170,7 +170,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: FadeTransition(
@@ -181,7 +181,10 @@ class _SplashScreenState extends State<SplashScreen>
             children: [
               // ── Animated icon with shimmer ──
               AnimatedBuilder(
-                animation: Listenable.merge([_iconController, _shimmerController]),
+                animation: Listenable.merge([
+                  _iconController,
+                  _shimmerController,
+                ]),
                 builder: (context, child) {
                   return Transform.scale(
                     scale: _iconScale.value,
@@ -196,21 +199,21 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 36),
 
               // ── Title ──
-                SlideTransition(
-                  position: _titleSlide,
-                  child: FadeTransition(
-                    opacity: _titleFade,
-                    child: Text(
-                      'README Architect',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.onSurface,
-                        letterSpacing: 1.0,
-                      ),
+              SlideTransition(
+                position: _titleSlide,
+                child: FadeTransition(
+                  opacity: _titleFade,
+                  child: Text(
+                    'README Architect',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: theme.colorScheme.onSurface,
+                      letterSpacing: 1.0,
                     ),
                   ),
                 ),
+              ),
 
               const SizedBox(height: 12),
 
@@ -248,14 +251,14 @@ class _SplashScreenState extends State<SplashScreen>
                   duration: const Duration(milliseconds: 2000),
                   builder: (context, value, _) {
                     final dots = '.' * ((value % 3) + 1);
-                      return Text(
-                        'Initializing$dots',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withAlpha(80),
-                          letterSpacing: 0.8,
-                        ),
-                      );
+                    return Text(
+                      'Initializing$dots',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onSurface.withAlpha(80),
+                        letterSpacing: 0.8,
+                      ),
+                    );
                   },
                 ),
               ),
@@ -270,14 +273,17 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildShimmerIcon() {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
-    
+
     return Container(
       width: 100,
       height: 100,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
-          colors: [theme.colorScheme.surfaceContainerHigh, theme.colorScheme.surface],
+          colors: [
+            theme.colorScheme.surfaceContainerHigh,
+            theme.colorScheme.surface,
+          ],
           radius: 0.85,
         ),
         boxShadow: [
@@ -299,11 +305,7 @@ class _SplashScreenState extends State<SplashScreen>
           return LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: const [
-              Colors.white24,
-              Colors.white70,
-              Colors.white24,
-            ],
+            colors: const [Colors.white24, Colors.white70, Colors.white24],
             stops: [
               (sweep - 0.3).clamp(0.0, 1.0),
               sweep.clamp(0.0, 1.0),
@@ -313,11 +315,7 @@ class _SplashScreenState extends State<SplashScreen>
         },
         blendMode: BlendMode.srcATop,
         child: Center(
-          child: Icon(
-            Icons.auto_awesome,
-            size: 44,
-            color: primary,
-          ),
+          child: Icon(Icons.auto_awesome, size: 44, color: primary),
         ),
       ),
     );
@@ -327,7 +325,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildProgressBar(double value) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
-    
+
     return SizedBox(
       width: 220,
       child: Column(
@@ -346,7 +344,11 @@ class _SplashScreenState extends State<SplashScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
                     gradient: LinearGradient(
-                      colors: [primary, primary.withAlpha(200), primary.withAlpha(150)],
+                      colors: [
+                        primary,
+                        primary.withAlpha(200),
+                        primary.withAlpha(150),
+                      ],
                     ),
                     boxShadow: [
                       BoxShadow(

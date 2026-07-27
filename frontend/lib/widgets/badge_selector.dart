@@ -16,7 +16,8 @@ class BadgeSelector extends StatefulWidget {
   final String repoOwner;
   final String repoName;
   final List<String> initialSelectedKeys;
-  final void Function(List<String> selectedKeys, String markdownToInject) onApply;
+  final void Function(List<String> selectedKeys, String markdownToInject)
+  onApply;
 
   const BadgeSelector({
     super.key,
@@ -30,32 +31,38 @@ class BadgeSelector extends StatefulWidget {
     BadgeOption(
       label: 'License',
       key: 'license',
-      markdownTemplate: '![License](https://img.shields.io/github/license/{owner}/{repo}?style=for-the-badge)',
+      markdownTemplate:
+          '![License](https://img.shields.io/github/license/{owner}/{repo}?style=for-the-badge)',
     ),
     BadgeOption(
       label: 'Stars',
       key: 'stars',
-      markdownTemplate: '![Stars](https://img.shields.io/github/stars/{owner}/{repo}?style=for-the-badge)',
+      markdownTemplate:
+          '![Stars](https://img.shields.io/github/stars/{owner}/{repo}?style=for-the-badge)',
     ),
     BadgeOption(
       label: 'Forks',
       key: 'forks',
-      markdownTemplate: '![Forks](https://img.shields.io/github/forks/{owner}/{repo}?style=for-the-badge)',
+      markdownTemplate:
+          '![Forks](https://img.shields.io/github/forks/{owner}/{repo}?style=for-the-badge)',
     ),
     BadgeOption(
       label: 'Issues',
       key: 'issues',
-      markdownTemplate: '![Issues](https://img.shields.io/github/issues/{owner}/{repo}?style=for-the-badge)',
+      markdownTemplate:
+          '![Issues](https://img.shields.io/github/issues/{owner}/{repo}?style=for-the-badge)',
     ),
     BadgeOption(
       label: 'Last Commit',
       key: 'last_commit',
-      markdownTemplate: '![Last Commit](https://img.shields.io/github/last-commit/{owner}/{repo}?style=for-the-badge)',
+      markdownTemplate:
+          '![Last Commit](https://img.shields.io/github/last-commit/{owner}/{repo}?style=for-the-badge)',
     ),
     BadgeOption(
       label: 'Code Size',
       key: 'code_size',
-      markdownTemplate: '![Code Size](https://img.shields.io/github/languages/code-size/{owner}/{repo}?style=for-the-badge)',
+      markdownTemplate:
+          '![Code Size](https://img.shields.io/github/languages/code-size/{owner}/{repo}?style=for-the-badge)',
     ),
   ];
 
@@ -64,7 +71,8 @@ class BadgeSelector extends StatefulWidget {
     required String repoOwner,
     required String repoName,
     required List<String> initialSelectedKeys,
-    required void Function(List<String> selectedKeys, String markdownToInject) onApply,
+    required void Function(List<String> selectedKeys, String markdownToInject)
+    onApply,
   }) {
     showModalBottomSheet(
       context: context,
@@ -96,12 +104,16 @@ class _BadgeSelectorState extends State<BadgeSelector> {
     // Generate the markdown string for the selected badges
     final selectedBadges = BadgeSelector.availableBadges
         .where((b) => _selectedKeys.contains(b.key))
-        .map((b) => b.markdownTemplate
-            .replaceAll('{owner}', widget.repoOwner)
-            .replaceAll('{repo}', widget.repoName))
+        .map(
+          (b) => b.markdownTemplate
+              .replaceAll('{owner}', widget.repoOwner)
+              .replaceAll('{repo}', widget.repoName),
+        )
         .join('\n');
 
-    final markdownToInject = selectedBadges.isNotEmpty ? '$selectedBadges\n\n' : '';
+    final markdownToInject = selectedBadges.isNotEmpty
+        ? '$selectedBadges\n\n'
+        : '';
 
     widget.onApply(_selectedKeys.toList(), markdownToInject);
     Navigator.of(context).pop();
@@ -134,7 +146,10 @@ class _BadgeSelectorState extends State<BadgeSelector> {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close, color: theme.colorScheme.onSurface.withAlpha(150)),
+                icon: Icon(
+                  Icons.close,
+                  color: theme.colorScheme.onSurface.withAlpha(150),
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -142,7 +157,10 @@ class _BadgeSelectorState extends State<BadgeSelector> {
           const SizedBox(height: 8),
           Text(
             'Inject live GitHub status badges into your README.',
-            style: TextStyle(color: theme.colorScheme.onSurface.withAlpha(150), fontSize: 14),
+            style: TextStyle(
+              color: theme.colorScheme.onSurface.withAlpha(150),
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -162,19 +180,30 @@ class _BadgeSelectorState extends State<BadgeSelector> {
                 },
                 borderRadius: BorderRadius.circular(30),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHigh,
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surfaceContainerHighest,
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.surfaceContainerHighest,
                     ),
                   ),
                   child: Text(
                     badge.label,
                     style: TextStyle(
-                      color: isSelected ? Colors.white : theme.colorScheme.onSurface,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected
+                          ? Colors.white
+                          : theme.colorScheme.onSurface,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                     ),
                   ),
                 ),
@@ -187,7 +216,10 @@ class _BadgeSelectorState extends State<BadgeSelector> {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: const Text('Apply Badges', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Apply Badges',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 16),
         ],

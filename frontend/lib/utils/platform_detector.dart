@@ -29,8 +29,9 @@ class PlatformDetector {
 
     // Running on the web — check user agent and screen size
     final userAgent = html.window.navigator.userAgent.toLowerCase();
-    
-    final isMobileDevice = userAgent.contains('mobile') ||
+
+    final isMobileDevice =
+        userAgent.contains('mobile') ||
         userAgent.contains('android') ||
         userAgent.contains('iphone') ||
         userAgent.contains('ipad') ||

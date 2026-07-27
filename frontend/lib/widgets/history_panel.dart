@@ -55,9 +55,9 @@ class HistoryPanelState extends State<HistoryPanel> {
       setState(() => _entries.removeWhere((e) => e.id == id));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
       }
     }
   }
@@ -67,10 +67,15 @@ class HistoryPanelState extends State<HistoryPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        title: Text('Clear History', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          'Clear History',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
         content: Text(
           'Delete all past generations? This cannot be undone.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(180)),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+          ),
         ),
         actions: [
           TextButton(
@@ -92,9 +97,9 @@ class HistoryPanelState extends State<HistoryPanel> {
         setState(() => _entries.clear());
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to clear: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to clear: $e')));
         }
       }
     }
@@ -123,12 +128,18 @@ class HistoryPanelState extends State<HistoryPanel> {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               border: Border(
-                bottom: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha(15)),
+                bottom: BorderSide(
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
+                ),
               ),
             ),
             child: Row(
               children: [
-                Icon(Icons.history, color: Theme.of(context).colorScheme.primary, size: 20),
+                Icon(
+                  Icons.history,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -145,7 +156,9 @@ class HistoryPanelState extends State<HistoryPanel> {
                   IconButton(
                     icon: Icon(
                       Icons.delete_sweep,
-                      color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(100),
                       size: 20,
                     ),
                     tooltip: 'Clear all',
@@ -165,59 +178,83 @@ class HistoryPanelState extends State<HistoryPanel> {
                     ),
                   )
                 : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.cloud_off, color: Theme.of(context).colorScheme.onSurface.withAlpha(60), size: 36),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Could not load history',
-                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(80), fontSize: 13),
-                              ),
-                              const SizedBox(height: 8),
-                              TextButton.icon(
-                                onPressed: refresh,
-                                icon: const Icon(Icons.refresh, size: 16),
-                                label: const Text('Retry'),
-                              ),
-                            ],
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.cloud_off,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(60),
+                            size: 36,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Could not load history',
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withAlpha(80),
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: refresh,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _entries.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.inbox_outlined,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(40),
+                          size: 44,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No generations yet',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(60),
+                            fontSize: 13,
                           ),
                         ),
-                      )
-                    : _entries.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.inbox_outlined, color: Theme.of(context).colorScheme.onSurface.withAlpha(40), size: 44),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No generations yet',
-                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(60), fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: _entries.length,
-                            separatorBuilder: (_, i) => Divider(
-                              color: Theme.of(context).colorScheme.onSurface.withAlpha(8),
-                              height: 1,
-                            ),
-                            itemBuilder: (context, index) {
-                              final entry = _entries[index];
-                              return _HistoryTile(
-                                entry: entry,
-                                badgeColor: _modeBadgeColor(entry.presentationMode),
-                                onTap: () => widget.onSelect(entry),
-                                onDelete: () => _deleteEntry(entry.id),
-                              );
-                            },
-                          ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: _entries.length,
+                    separatorBuilder: (_, i) => Divider(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withAlpha(8),
+                      height: 1,
+                    ),
+                    itemBuilder: (context, index) {
+                      final entry = _entries[index];
+                      return _HistoryTile(
+                        entry: entry,
+                        badgeColor: _modeBadgeColor(entry.presentationMode),
+                        onTap: () => widget.onSelect(entry),
+                        onDelete: () => _deleteEntry(entry.id),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -292,7 +329,9 @@ class _HistoryTile extends StatelessWidget {
                       Text(
                         entry.timeAgo,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withAlpha(60),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withAlpha(60),
                           fontSize: 11,
                         ),
                       ),

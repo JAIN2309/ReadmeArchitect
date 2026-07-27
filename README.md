@@ -163,7 +163,11 @@ readme_architect/
 ├── 📁 readme_assets/              # Screenshots and visual branding assets
 │
 ├── 📁 backend/
-│   ├── main.py                    # FastAPI server, Gemini client, GitHub Scraper, History API
+│   ├── main.py                    # FastAPI app entry point & router attachment
+│   ├── routes.py                  # API endpoints and HTTP methods
+│   ├── services.py                # Core business logic (Scraping, LLM, PR creation)
+│   ├── models.py                  # Pydantic schemas (Request/Response models)
+│   ├── store.py                   # In-memory history state management
 │   ├── requirements.txt           # Python dependencies
 │   ├── .env.example               # Environment template (Needs GEMINI_API_KEY)
 │   └── .gitignore                 # Excludes venv, .env, __pycache__
@@ -181,10 +185,18 @@ readme_architect/
     │   ├── services/
     │   │   ├── api_service.dart          # HTTP client to backend (generate + history CRUD)
     │   │   └── export_service.dart       # Web download (Blob) / Clipboard fallback logic
+    │   ├── theme/
+    │   │   └── theme_provider.dart       # Core Theme Engine (Dark/Light mode support)
     │   ├── utils/
     │   │   └── platform_detector.dart    # Responsive routing (Android vs Chrome/Edge)
     │   └── widgets/
-    │       └── history_panel.dart        # Reusable history list (delete, clear all, retry)
+    │       ├── history_panel.dart        # Reusable history list (delete, clear all, retry)
+    │       ├── badge_selector.dart       # Interactive badge selector UI
+    │       └── shared/                   # Shared UI components seamlessly integrated with the Theme Engine
+    │           ├── url_input_field.dart  # Reusable GitHub URL input text field
+    │           ├── mode_selector.dart    # Animated presentation mode toggle
+    │           ├── generate_button.dart  # Primary action button with loading states
+    │           └── settings_dialog.dart  # GitHub token configuration dialog
     └── pubspec.yaml
 ```
 

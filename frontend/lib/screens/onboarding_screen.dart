@@ -24,27 +24,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardingStep(
       icon: Icons.link,
       title: '1. Paste Repository URL',
-      description: 'Enter any public GitHub repository link. Our engine will fetch the raw source code and structure for deep analysis.',
+      description:
+          'Enter any public GitHub repository link. Our engine will fetch the raw source code and structure for deep analysis.',
     ),
     _OnboardingStep(
       icon: Icons.style,
       title: '2. Select Presentation Mode',
-      description: 'Choose Basic for simple tools, Advanced for portfolios, or Professional for enterprise-grade docs with badges and setup guides.',
+      description:
+          'Choose Basic for simple tools, Advanced for portfolios, or Professional for enterprise-grade docs with badges and setup guides.',
     ),
     _OnboardingStep(
       icon: Icons.edit_note,
       title: '3. Live Generation & Editing',
-      description: 'Watch the AI instantly architect your README, then live-edit the raw markdown in our split-pane editor to perfect it.',
+      description:
+          'Watch the AI instantly architect your README, then live-edit the raw markdown in our split-pane editor to perfect it.',
     ),
     _OnboardingStep(
       icon: Icons.merge_type,
       title: '4. Direct GitHub PRs',
-      description: 'Add your Personal Access Token in Settings and instantly push your polished README directly to your repository as a Pull Request!',
+      description:
+          'Add your Personal Access Token in Settings and instantly push your polished README directly to your repository as a Pull Request!',
     ),
     _OnboardingStep(
       icon: Icons.inventory_2,
       title: '5. Export & History',
-      description: 'Copy to clipboard, download as a .md file, or swipe into the history panel to revisit past generations.',
+      description:
+          'Copy to clipboard, download as a .md file, or swipe into the history panel to revisit past generations.',
     ),
   ];
 
@@ -134,14 +139,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               ),
                             ],
                           ),
-                          child: Icon(
-                            step.icon,
-                            size: 40,
-                            color: primary,
-                          ),
+                          child: Icon(step.icon, size: 40, color: primary),
                         ),
                         const SizedBox(height: 48),
-                        
+
                         // Title
                         Text(
                           step.title,
@@ -154,7 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Description
                         Text(
                           step.description,
