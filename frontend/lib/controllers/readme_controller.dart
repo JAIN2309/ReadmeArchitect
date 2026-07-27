@@ -70,7 +70,7 @@ class ReadmeController extends ChangeNotifier {
   void applyBadges(List<String> keys, String injectedMarkdown) {
     selectedBadges = keys;
     if (injectedMarkdown.isNotEmpty) {
-      generatedMarkdown = injectedMarkdown + '\n\n' + generatedMarkdown;
+      generatedMarkdown = '$injectedMarkdown\n\n$generatedMarkdown';
       markdownController.text = generatedMarkdown;
     }
     notifyListeners();

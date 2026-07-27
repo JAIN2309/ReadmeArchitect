@@ -7,11 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../models/history_entry.dart';
-import '../services/api_service.dart';
-import '../services/export_service.dart';
 import '../widgets/history_panel.dart';
 import '../widgets/badge_selector.dart';
 import '../theme/theme_provider.dart';

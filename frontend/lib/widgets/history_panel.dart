@@ -116,7 +116,6 @@ class HistoryPanelState extends State<HistoryPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
@@ -279,7 +278,6 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       splashColor: Theme.of(context).colorScheme.primary.withAlpha(20),
