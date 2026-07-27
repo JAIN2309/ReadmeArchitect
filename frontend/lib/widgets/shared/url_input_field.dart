@@ -42,9 +42,12 @@ class UrlInputField extends StatelessWidget {
         ),
         filled: true,
         fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        border: OutlineInputBorder(
+        enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),
-          borderSide: BorderSide.none,
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            width: 1,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(borderRadius),

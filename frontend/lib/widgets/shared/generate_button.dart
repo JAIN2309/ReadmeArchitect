@@ -41,7 +41,7 @@ class GenerateButton extends StatelessWidget {
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: Theme.of(context).colorScheme.surface,
+                  color: Colors.white,
                 ),
               )
             : Row(

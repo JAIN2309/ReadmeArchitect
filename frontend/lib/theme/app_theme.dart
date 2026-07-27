@@ -1,59 +1,60 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // ── Light Mode ─ Clean, Airy, High-Contrast ────────────────────────────
+  // ── Pristine Modern Light Mode (Slate Palette) ───────────────────────────
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    scaffoldBackgroundColor: const Color(0xFFF7F8FA),
+    scaffoldBackgroundColor: const Color(0xFFF8FAFC), // Slate 50
     fontFamily: 'Segoe UI',
     useMaterial3: true,
     colorScheme: const ColorScheme.light(
-      primary: Color(0xFF0066FF),       // Vivid Blue
+      primary: Color(0xFF2563EB),                  // Blue 600 accent
       onPrimary: Colors.white,
-      surface: Colors.white,
-      onSurface: Color(0xFF1A1A1A),     // Near-black text
-      surfaceContainerHigh: Color(0xFFF0F1F3),   // Input fields / cards
-      surfaceContainerHighest: Color(0xFFDCDEE3), // Borders
-      secondary: Color(0xFF0066FF),
+      surface: Colors.white,                        // Cards, Panels, Toolbar
+      onSurface: Color(0xFF0F172A),                // Slate 900 - Crisp dark text
+      surfaceContainerHigh: Color(0xFFF1F5F9),      // Slate 100 - Inputs, Tabs container
+      surfaceContainerHighest: Color(0xFFE2E8F0),   // Slate 200 - Borders, Dividers
+      secondary: Color(0xFF2563EB),
       onSecondary: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.white,
-      foregroundColor: Color(0xFF1A1A1A),
+      foregroundColor: Color(0xFF0F172A),
       elevation: 0,
       scrolledUnderElevation: 0.5,
     ),
-    dividerColor: const Color(0xFFE2E4E9),
+    dividerColor: const Color(0xFFE2E8F0),
     cardColor: Colors.white,
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: const Color(0xFF2563EB),
         foregroundColor: Colors.white,
-        elevation: 0,
+        elevation: 2,
+        shadowColor: const Color(0xFF2563EB).withAlpha(80),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),
   );
 
-  // ── Dark Mode ─ Rich, Deep, Premium ────────────────────────────────────
+  // ── Premium Dark Mode (Zinc Palette) ────────────────────────────────────
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: const Color(0xFF09090B),  // Near-black
+    scaffoldBackgroundColor: const Color(0xFF09090B), // Zinc 950 - Deep dark
     fontFamily: 'Segoe UI',
     useMaterial3: true,
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF3B82F6),       // Bright Blue accent
+      primary: Color(0xFF3B82F6),                  // Blue 500 - Vibrant blue accent
       onPrimary: Colors.white,
-      surface: Color(0xFF111113),       // Panels / cards
-      onSurface: Color(0xFFECECEE),    // High-contrast white text
-      surfaceContainerHigh: Color(0xFF18181B),  // Input fields / containers
-      surfaceContainerHighest: Color(0xFF27272A), // Borders
+      surface: Color(0xFF18181B),                  // Zinc 900 - Panels, Toolbar
+      onSurface: Color(0xFFF4F4F5),                // Zinc 100 - Crisp white text
+      surfaceContainerHigh: Color(0xFF27272A),      // Zinc 800 - Inputs, Tabs container
+      surfaceContainerHighest: Color(0xFF3F3F46),   // Zinc 700 - Borders, Dividers
       secondary: Color(0xFF3B82F6),
       onSecondary: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF111113),
-      foregroundColor: Color(0xFFECECEE),
+      backgroundColor: Color(0xFF18181B),
+      foregroundColor: Color(0xFFF4F4F5),
       elevation: 0,
       scrolledUnderElevation: 0,
     ),
@@ -61,9 +62,10 @@ class AppTheme {
     cardColor: const Color(0xFF18181B),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF09090B),
-        elevation: 0,
+        backgroundColor: const Color(0xFF3B82F6),
+        foregroundColor: Colors.white,
+        elevation: 2,
+        shadowColor: const Color(0xFF3B82F6).withAlpha(80),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     ),

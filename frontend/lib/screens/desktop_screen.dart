@@ -248,7 +248,7 @@ class _DesktopScreenState extends State<DesktopScreen>
         color: Theme.of(context).colorScheme.surface,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
         ),
       ),
