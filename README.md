@@ -164,8 +164,8 @@ readme_architect/
 │
 ├── 📁 backend/
 │   ├── main.py                    # FastAPI app entry point & router attachment
-│   ├── routes.py                  # API endpoints and HTTP methods
-│   ├── services.py                # Core business logic (Scraping, LLM, PR creation)
+│   ├── routes/                    # API endpoints and HTTP methods
+│   ├── services/                  # Core business logic (Scraping, LLM, PR creation)
 │   ├── models/                    # Pydantic schemas (Request/Response models)
 │   ├── store.py                   # In-memory history state management
 │   ├── requirements.txt           # Python dependencies
