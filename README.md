@@ -54,7 +54,8 @@ A **production-grade AI documentation engine** connecting developers with automa
 - Pinned temperature (`0.2`) for deterministic markdown output
 - Graceful mock-tree fallback when GitHub API is rate-limited
 - **GitHub URL Validation** via Pydantic field validators
-- **In-Memory History Store** — saves all past generations with timestamps
+- **SQLite History Store** — session-isolated, persistent history tracking via UUIDs
+- **Global Rate Limiting** — IP-based API throttling (5 req/min) via SlowAPI
 
 </td>
 <td width="33%" valign="top">
@@ -68,6 +69,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 - Collapsible **History Sidebar** with animated open/close
 - One-click **copy** & `.md` **download** (browser file save)
 - Color-coded **mode badges** and **time-ago labels** on history entries
+- **Mock Fallback Banners** — explicit visual warnings when GitHub API hits rate limits
 
 </td>
 <td width="33%" valign="top">
@@ -135,6 +137,8 @@ While the core experience is highly polished, the following features are planned
 | **HTTPX** | Fully asynchronous HTTP client for GitHub API scraping & raw file fetching |
 | **Pydantic** | Strict data validation, payload serialization, and GitHub URL field validators |
 | **python-dotenv** | Environment variable management (`.env` file loading) |
+| **SlowAPI** | In-memory IP-based rate limiting to protect the Gemini API quota |
+| **SQLite3** | Persistent, lightweight database for session-isolated user history |
 
 </details>
 
@@ -148,6 +152,7 @@ While the core experience is highly polished, the following features are planned
 | **flutter_secure_storage** | Native Keystore/Keychain encryption for storing GitHub Personal Access Tokens (PAT) securely |
 | **universal_html** | Web-based file downloads (Blob + AnchorElement) and browser user-agent detection for platform routing |
 | **http** | HTTP client connecting to the FastAPI backend |
+| **uuid** | Generates unique session identifiers for isolated backend history |
 | **Linear-style UI** | Custom built design system — deep `#0D0D1A` backgrounds, `#6C63FF` accent gradients, glowing borders, smooth fade transitions |
 
 </details>
@@ -303,7 +308,8 @@ curl -X POST http://localhost:8000/api/auto-readme \
   "markdown": "# Generated README content...",
   "repo_owner": "fastapi",
   "repo_name": "fastapi",
-  "presentation_mode": "Advanced"
+  "presentation_mode": "Advanced",
+  "is_mock": false
 }
 ```
 
