@@ -2,7 +2,7 @@
 library;
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:http/http.dart' as http;
 import '../models/history_entry.dart';
 
@@ -45,8 +45,12 @@ class ApiService {
       }
       return 'https://readmearchitect.onrender.com';
     }
-    // Native mobile — use localhost (for dev) or change for production.
-    return 'http://localhost:8000';
+    // Native mobile — point to Render URL for production.
+    if (kDebugMode) {
+      // For local emulator testing (uncomment 10.0.2.2 if on Android emulator)
+      return 'http://localhost:8000'; 
+    }
+    return 'https://readmearchitect.onrender.com';
   }
 
   /// Generate a README by sending the [githubUrl] and [presentationMode]

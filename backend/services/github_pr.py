@@ -32,6 +32,8 @@ async def create_github_pr(github_url: str, github_token: str, markdown: str) ->
             raise Exception(f"Failed to create branch: {create_ref_resp.text}")
         
         commit_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo}/git/commits/{base_sha}", headers=headers)
+        if commit_resp.status_code != 200:
+            raise Exception("Failed to get commit SHA")
         tree_sha = commit_resp.json()["tree"]["sha"]
         
         tree_data = {
@@ -43,6 +45,8 @@ async def create_github_pr(github_url: str, github_token: str, markdown: str) ->
             headers=headers,
             json=tree_data
         )
+        if create_tree_resp.status_code != 201:
+            raise Exception("Failed to create Git tree")
         new_tree_sha = create_tree_resp.json()["sha"]
         
         commit_data = {
@@ -55,13 +59,17 @@ async def create_github_pr(github_url: str, github_token: str, markdown: str) ->
             headers=headers,
             json=commit_data
         )
+        if create_commit_resp.status_code != 201:
+            raise Exception("Failed to create Git commit")
         new_commit_sha = create_commit_resp.json()["sha"]
         
-        await client.patch(
+        patch_resp = await client.patch(
             f"https://api.github.com/repos/{owner}/{repo}/git/refs/heads/{new_branch_name}",
             headers=headers,
             json={"sha": new_commit_sha}
         )
+        if patch_resp.status_code != 200:
+            raise Exception("Failed to update branch reference")
         
         pr_data = {
             "title": "docs: Update README.md",

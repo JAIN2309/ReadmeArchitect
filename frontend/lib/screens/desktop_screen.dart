@@ -9,7 +9,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/history_entry.dart';
 import '../services/api_service.dart';
@@ -62,9 +62,10 @@ class _DesktopScreenState extends State<DesktopScreen>
   }
 
   Future<void> _loadToken() async {
-    final prefs = await SharedPreferences.getInstance();
+    final storage = const FlutterSecureStorage();
+    final token = await storage.read(key: 'github_token');
     setState(() {
-      _githubToken = prefs.getString('github_token') ?? '';
+      _githubToken = token ?? '';
     });
   }
 
