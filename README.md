@@ -11,6 +11,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-005571?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Google Gemini](https://img.shields.io/badge/Google_Gemini-3.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Firestore_%26_Auth-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 
 ![HTTPX](https://img.shields.io/badge/HTTPX-Async-010101?style=flat-square)
 ![Pydantic](https://img.shields.io/badge/Pydantic-Validation-E92063?style=flat-square)
@@ -45,29 +46,28 @@ A **production-grade AI documentation engine** connecting developers with automa
 <tr>
 <td width="33%" valign="top">
 
-### 🤖 AI Engine (Backend)
+### 🤖 AI Engine & Cloud Persistence
 - **Deep Source Scraping** via GitHub Trees API (recursive file tree)
 - **Deep File Content Fetching** — downloads up to 5 key files (10k chars each) for richer AI context
 - **Repo Metadata Extraction** — scrapes description, stars, license, primary language, and default branch
 - Automatic detection of `package.json`, `main.py`, `pubspec.yaml`, `Dockerfile`, `Cargo.toml`, `go.mod`, and more
 - **Context-Aware Inference** using Gemini 3.5 Flash
 - Pinned temperature (`0.2`) for deterministic markdown output
-- Graceful mock-tree fallback when GitHub API is rate-limited
+- **Firebase Cloud Firestore Store** — Realtime NoSQL document storage (`users/{session_id}/history`) with automatic SQLite fallback
 - **GitHub URL Validation** via Pydantic field validators
-- **SQLite History Store** — session-isolated, persistent history tracking via UUIDs
 - **Global Rate Limiting** — IP-based API throttling (5 req/min) via SlowAPI
 
 </td>
 <td width="33%" valign="top">
 
 ### 💻 Desktop/Web Frontend
+- **Gated README Generation** — prompts responsive `AuthDialog` sign-in modal if user is unauthenticated
 - **Vertical Icon Sidebar** — quick access to History, Badges, Copy, PR creation, and File Export
 - **Line-Numbered Source Editor** — full line-numbered gutter with raw Markdown editing
 - **Live Preview Pane** — real-time rendered preview with live `● SYNCING` indicator
 - **Direct GitHub Integration** — push generated READMEs directly via Pull Request using Personal Access Tokens
 - **Interactive Badge Selector** — inject live Shields.io badges (License, Stars, Forks, etc.)
-- **Responsive Settings Modal** — centered dialog on desktop / bottom sheet on mobile
-- **Theme Engine** — Light, Dark, and System mode persistence with active pill selectors
+- **Responsive Settings & Profile** — user account avatar, token visibility toggle, and ThemeMode controls
 - **Enhanced History Panel** — search bar filter, date grouping (Today, Yesterday, etc.), and quick action card buttons (View, Copy, Download, Delete)
 
 </td>
@@ -75,6 +75,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 
 ### 📱 Native Mobile Frontend
 - Single-column, thumb-friendly vertical scroll layout
+- **Firebase Authentication Modal** — Email Sign-In / Account Creation and Guest Session login
 - **Segmented Edit / Preview Toggle** — switch seamlessly between Editor and Rendered Preview
 - **Quick Action Bottom Bar** — one-tap Copy, PR creation, and File Export
 - **Direct GitHub Integration** — push your README directly via PR from your phone
@@ -89,7 +90,8 @@ A **production-grade AI documentation engine** connecting developers with automa
 </table>
 
 ### 🎬 Shared Experience
-- **App Theming Engine** — dynamically built from the ground up supporting Slate Light (`#F8FAFC`), Zinc Dark (`#09090B`), and System Auto modes.
+- **Firebase Authentication Engine** — Email/Password sign-in, account creation, and instant Guest Session mode.
+- **App Theming Engine** — dynamically built supporting Slate Light (`#F8FAFC`), Zinc Dark (`#09090B`), and System Auto modes.
 - **Animated Splash Screen** — 6-stage staggered entrance with custom app branding.
 - **5-Step Interactive Onboarding** — Paste URL → Select Mode → Preview → GitHub PR → Export/History.
 - **Responsive Platform Routing** — auto-routes to Mobile or Desktop layout based on screen width and device capabilities.
@@ -134,11 +136,12 @@ While the core experience is highly polished, the following features are planned
 | **FastAPI** | High-performance async web framework |
 | **Uvicorn** | ASGI server (`--reload` for dev) |
 | **google-genai** | Direct integration with Gemini 3.5 Flash via Google GenAI SDK |
+| **firebase-admin** | Admin SDK connecting to Cloud Firestore NoSQL storage |
 | **HTTPX** | Fully asynchronous HTTP client for GitHub API scraping & raw file fetching |
 | **Pydantic** | Strict data validation, payload serialization, and GitHub URL field validators |
 | **python-dotenv** | Environment variable management (`.env` file loading) |
 | **SlowAPI** | In-memory IP-based rate limiting to protect the Gemini API quota |
-| **SQLite3** | Persistent, lightweight database for session-isolated user history |
+| **SQLite3** | Automatic local database fallback for development |
 
 </details>
 
@@ -148,6 +151,8 @@ While the core experience is highly polished, the following features are planned
 | Technology | Purpose |
 |-----------|---------|
 | **Flutter 3.x** | Cross-platform UI toolkit (Web, Desktop, Mobile) |
+| **cloud_firestore** | Realtime document storage SDK for fetching & saving user history |
+| **firebase_auth** | User authentication engine (Email/Password, Registration, Guest mode) |
 | **flutter_markdown** | Live rendering of AI-generated markdown strings with custom styled sheets |
 | **flutter_secure_storage** | Native Keystore/Keychain encryption for storing GitHub Personal Access Tokens (PAT) securely |
 | **universal_html** | Web-based file downloads (Blob + AnchorElement) and browser user-agent detection for platform routing |
@@ -175,9 +180,9 @@ readme_architect/
 │   ├── routes/                    # API endpoints and HTTP methods
 │   ├── services/                  # Core business logic (Scraping, LLM, PR creation)
 │   ├── models/                    # Pydantic schemas (Request/Response models)
-│   ├── store.py                   # SQLite session history management
-│   ├── requirements.txt           # Python dependencies
-│   ├── .env.example               # Environment template (Needs GEMINI_API_KEY)
+│   ├── store.py                   # Cloud Firestore store & SQLite fallback
+│   ├── requirements.txt           # Python dependencies (includes firebase-admin)
+│   ├── .env.example               # Environment template (GEMINI_API_KEY, FIREBASE_SERVICE_ACCOUNT_JSON)
 │   └── .gitignore                 # Excludes venv, .env, __pycache__
 │
 └── 📁 frontend/
@@ -186,7 +191,7 @@ readme_architect/
     ├── lib/
     │   ├── main.dart                    # App entry point, MaterialApp theme config
     │   ├── models/
-    │   │   └── history_entry.dart        # History data model with time-ago formatting
+    │   │   └── history_entry.dart        # History data model with flexible ID types
     │   ├── screens/
     │   │   ├── splash_screen.dart        # 6-stage animated startup sequence
     │   │   ├── onboarding_screen.dart    # 5-step interactive card-based walkthrough
@@ -194,6 +199,7 @@ readme_architect/
     │   │   └── mobile_screen.dart        # Segmented view with bottom quick actions
     │   ├── services/
     │   │   ├── api_service.dart          # HTTP client to backend (generate + history CRUD)
+    │   │   ├── auth_service.dart         # Firebase Auth engine & Guest mode manager
     │   │   └── export_service.dart       # Web download (Blob) / Clipboard fallback logic
     │   ├── theme/
     │   │   ├── app_theme.dart            # Slate & Zinc design system definitions
@@ -204,6 +210,7 @@ readme_architect/
     │       ├── history_panel.dart        # Date-grouped history with search & card action buttons
     │       ├── badge_selector.dart       # Interactive badge selector UI
     │       └── shared/                   # Shared UI components
+    │           ├── auth_dialog.dart      # Responsive Email/Password & Guest auth modal
     │           ├── url_input_field.dart  # Reusable GitHub URL input text field
     │           ├── mode_selector.dart    # Elevated segmented presentation mode toggle
     │           ├── generate_button.dart  # Primary action button with loading states
@@ -216,7 +223,7 @@ readme_architect/
 ## 🚀 Getting Started
 
 ### Prerequisites
-> [Flutter SDK](https://docs.flutter.dev/get-started/install) · [Python 3.11+](https://www.python.org/downloads/) · [Google Gemini API Key](https://aistudio.google.com/apikey)
+> [Flutter SDK](https://docs.flutter.dev/get-started/install) · [Python 3.11+](https://www.python.org/downloads/) · [Google Gemini API Key](https://aistudio.google.com/apikey) · [Firebase Account](https://console.firebase.google.com)
 
 ### 1️⃣ Clone the repository
 ```bash
@@ -241,8 +248,9 @@ pip install -r requirements.txt
 Create a `.env` file in the `backend/` directory:
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
+FIREBASE_SERVICE_ACCOUNT_JSON=your_firebase_service_account_json_content_here
 ```
-> 💡 **Get a Key:** Generate one for free at [Google AI Studio](https://aistudio.google.com/app/apikey).
+> 💡 **Get Keys:** Generate Gemini Key at [Google AI Studio](https://aistudio.google.com/app/apikey) and Firebase Private Key at [Firebase Console Settings](https://console.firebase.google.com).
 
 Start the backend server:
 ```bash
@@ -260,8 +268,6 @@ Run the application on Desktop Web (Chrome):
 ```bash
 flutter run -d chrome
 ```
-
-> 📱 **For Android:** Use `flutter run -d <device_id>` to launch the mobile-optimized layout. See the [ROADMAP.md](ROADMAP.md) for detailed platform-specific instructions.
 
 ---
 
@@ -281,11 +287,6 @@ The engine doesn't just guess what your project does based on the name. It activ
 └──────────────────────────────────┘   └──────────────────────────────────────────┘
 ```
 
-**Key files auto-detected by regex:**
-`README.md` · `package.json` · `requirements.txt` · `pubspec.yaml` · `Dockerfile` · `docker-compose.yml` · `tsconfig.json` · `pom.xml` · `Cargo.toml` · `go.mod` · `main.py` · `src/index.[jt]sx?` · `App.[jt]sx?` · `lib/main.dart`
-
-By passing these files straight into the LLM context window alongside repo metadata (description, stars, license, primary language), the AI can document exact setup commands and architectural decisions without hallucinations.
-
 ---
 
 ## 🔌 API Endpoints
@@ -295,69 +296,10 @@ All endpoints are served by the FastAPI backend at `http://localhost:8000`.
 | Method | Endpoint | Description | Request Body |
 |--------|----------|-------------|-------------|
 | `POST` | `/api/auto-readme` | Generate a README for a public GitHub repo | `{ "github_url": "https://github.com/owner/repo", "presentation_mode": "Basic" \| "Advanced" \| "Professional" }` |
-| `GET` | `/api/history` | Fetch all past generations for the user's session | — |
-| `DELETE` | `/api/history/{entry_id}` | Delete a single history entry by ID | — |
-| `DELETE` | `/api/history` | Clear all history entries for the user's session | — |
+| `GET` | `/api/history` | Fetch all past Cloud Firestore generations for the user | — |
+| `DELETE` | `/api/history/{entry_id}` | Delete a single history document by ID | — |
+| `DELETE` | `/api/history` | Clear all history entries for the user | — |
 | `GET` | `/health` | Health check | — |
-
-### Example: Generate a README
-```bash
-curl -X POST http://localhost:8000/api/auto-readme \
-  -H "Content-Type: application/json" \
-  -d '{"github_url": "https://github.com/fastapi/fastapi", "presentation_mode": "Advanced"}'
-```
-
-### Response Schema
-```json
-{
-  "markdown": "# Generated README content...",
-  "repo_owner": "fastapi",
-  "repo_name": "fastapi",
-  "presentation_mode": "Advanced",
-  "is_mock": false
-}
-```
-
-> 📖 **Interactive Docs:** Visit [http://localhost:8000/docs](http://localhost:8000/docs) for the auto-generated Swagger UI.
-
----
-
-## ⭐ Presentation Modes
-
-| Mode | Target Audience | Formatting Strategy |
-|-------|------|-------------|
-| **Basic** | Small utility scripts | Minimalist H3 headers, direct copy-paste install commands, short sentences. |
-| **Advanced** | Hackathons / Portfolios | Adds Features list, directory tree visualization, detailed tech stack, API references. |
-| **Professional** | Enterprise / Open Source | Injects Shields.io badges, Markdown tables, contributing guidelines, license blocks, and logo placeholders. |
-
----
-
-## 🧪 Testing
-
-### Frontend (Flutter)
-The project includes a smoke test that verifies the app renders correctly without crashing:
-
-```bash
-cd frontend
-flutter test
-```
-
-**Test file:** [`widget_test.dart`](frontend/test/widget_test.dart)  
-**What it tests:** Verifies the `ReadmeArchitectApp` widget mounts and the splash screen renders both the title ("README Architect") and subtitle ("AI-Powered Documentation Generator").
-
-### Backend (FastAPI)
-The backend can be tested interactively via the auto-generated **Swagger UI**:
-
-```bash
-# Start the server
-cd backend
-uvicorn main:app --reload --port 8000
-
-# Open in browser
-# → http://localhost:8000/docs
-```
-
-From Swagger, you can test all endpoints directly — click **Try it out** on any endpoint, fill in the parameters, and execute.
 
 ---
 
@@ -365,7 +307,7 @@ From Swagger, you can test all endpoints directly — click **Try it out** on an
 
 | Project | Description | Live Frontend | Live Backend | Stack |
 | :--- | :--- | :--- | :--- | :--- |
-| **README Architect** | AI-powered documentation engine connecting developers with automated, picture-perfect README generation. | 🌐 [Live Demo](https://jain2309.github.io/ReadmeArchitect/) | ⚙️ [FastAPI Service](https://readmearchitect.onrender.com/health) | Flutter · Dart · FastAPI · Gemini AI |
+| **README Architect** | AI-powered documentation engine connecting developers with automated, picture-perfect README generation. | 🌐 [Live Demo](https://jain2309.github.io/ReadmeArchitect/) | ⚙️ [FastAPI Service](https://readmearchitect.onrender.com/health) | Flutter · Dart · FastAPI · Gemini AI · Firebase |
 | **FoodBridge MERN** | Full-stack real-time food rescue platform connecting donors with NGOs to minimize food waste. | 🌐 [Live App](https://jain2309.github.io/foodbridgemern/) | ⚙️ [API Service](https://foodbridgemern.onrender.com) | React · Node.js · Express · MongoDB · Redis |
 
 ---
