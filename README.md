@@ -46,14 +46,15 @@ A **production-grade AI documentation engine** connecting developers with automa
 <tr>
 <td width="33%" valign="top">
 
-### 🤖 AI Engine & Cloud Persistence
+### 🤖 AI Engine & Cloud Security
 - **Deep Source Scraping** via GitHub Trees API (recursive file tree)
 - **Deep File Content Fetching** — downloads up to 5 key files (10k chars each) for richer AI context
 - **Repo Metadata Extraction** — scrapes description, stars, license, primary language, and default branch
 - Automatic detection of `package.json`, `main.py`, `pubspec.yaml`, `Dockerfile`, `Cargo.toml`, `go.mod`, and more
 - **Context-Aware Inference** using Gemini 3.5 Flash
 - Pinned temperature (`0.2`) for deterministic markdown output
-- **Firebase Cloud Firestore Store** — Realtime NoSQL document storage (`users/{session_id}/history`) with automatic SQLite fallback
+- **Firebase Bearer ID Token Verification** — FastAPI middleware cryptographically verifies signed Bearer tokens on protected endpoints
+- **Firebase Cloud Firestore Store** — Realtime NoSQL document storage (`users/{session_id}/history`) with permanent 24/7 security rules
 - **GitHub URL Validation** via Pydantic field validators
 - **Global Rate Limiting** — IP-based API throttling (5 req/min) via SlowAPI
 
@@ -61,7 +62,8 @@ A **production-grade AI documentation engine** connecting developers with automa
 <td width="33%" valign="top">
 
 ### 💻 Desktop/Web Frontend
-- **Gated README Generation** — prompts responsive `AuthDialog` sign-in modal if user is unauthenticated
+- **1-Click Google & Social Auth** — Sign In with Google, Email/Password, or Guest Session inside responsive `AuthDialog`
+- **Gated README Generation** — prompts sign-in modal if user is unauthenticated
 - **Vertical Icon Sidebar** — quick access to History, Badges, Copy, PR creation, and File Export
 - **Line-Numbered Source Editor** — full line-numbered gutter with raw Markdown editing
 - **Live Preview Pane** — real-time rendered preview with live `● SYNCING` indicator
@@ -75,7 +77,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 
 ### 📱 Native Mobile Frontend
 - Single-column, thumb-friendly vertical scroll layout
-- **Firebase Authentication Modal** — Email Sign-In / Account Creation and Guest Session login
+- **Firebase Authentication Engine** — 1-Click Google Sign-In, Email Sign-In / Registration, and Guest Session mode
 - **Segmented Edit / Preview Toggle** — switch seamlessly between Editor and Rendered Preview
 - **Quick Action Bottom Bar** — one-tap Copy, PR creation, and File Export
 - **Direct GitHub Integration** — push your README directly via PR from your phone
@@ -90,7 +92,7 @@ A **production-grade AI documentation engine** connecting developers with automa
 </table>
 
 ### 🎬 Shared Experience
-- **Firebase Authentication Engine** — Email/Password sign-in, account creation, and instant Guest Session mode.
+- **Firebase Security & Auth Engine** — Cryptographically signed Bearer ID Token header verification + 1-Click Google Sign-In + Permanent Firestore Security Rules.
 - **App Theming Engine** — dynamically built supporting Slate Light (`#F8FAFC`), Zinc Dark (`#09090B`), and System Auto modes.
 - **Animated Splash Screen** — 6-stage staggered entrance with custom app branding.
 - **5-Step Interactive Onboarding** — Paste URL → Select Mode → Preview → GitHub PR → Export/History.
@@ -136,7 +138,7 @@ While the core experience is highly polished, the following features are planned
 | **FastAPI** | High-performance async web framework |
 | **Uvicorn** | ASGI server (`--reload` for dev) |
 | **google-genai** | Direct integration with Gemini 3.5 Flash via Google GenAI SDK |
-| **firebase-admin** | Admin SDK connecting to Cloud Firestore NoSQL storage |
+| **firebase-admin** | Admin SDK connecting to Cloud Firestore & Bearer ID Token verification |
 | **HTTPX** | Fully asynchronous HTTP client for GitHub API scraping & raw file fetching |
 | **Pydantic** | Strict data validation, payload serialization, and GitHub URL field validators |
 | **python-dotenv** | Environment variable management (`.env` file loading) |
@@ -152,11 +154,12 @@ While the core experience is highly polished, the following features are planned
 |-----------|---------|
 | **Flutter 3.x** | Cross-platform UI toolkit (Web, Desktop, Mobile) |
 | **cloud_firestore** | Realtime document storage SDK for fetching & saving user history |
-| **firebase_auth** | User authentication engine (Email/Password, Registration, Guest mode) |
+| **firebase_auth** | User authentication engine (1-Click Google, Email/Password, Guest mode) |
+| **google_sign_in** | Native 1-Click Google Sign-In SDK integration |
 | **flutter_markdown** | Live rendering of AI-generated markdown strings with custom styled sheets |
 | **flutter_secure_storage** | Native Keystore/Keychain encryption for storing GitHub Personal Access Tokens (PAT) securely |
 | **universal_html** | Web-based file downloads (Blob + AnchorElement) and browser user-agent detection for platform routing |
-| **http** | HTTP client connecting to the FastAPI backend |
+| **http** | HTTP client connecting to the FastAPI backend with dynamic Bearer headers |
 | **uuid** | Generates unique session identifiers for isolated backend history |
 | **flutter_launcher_icons** | Automated multi-density Android mipmap & Web PWA icon generator |
 | **flutter_native_splash** | OS-level Android 12+ and legacy launch splash screen orchestrator |
@@ -177,7 +180,7 @@ readme_architect/
 │
 ├── 📁 backend/
 │   ├── main.py                    # FastAPI app entry point & router attachment
-│   ├── routes/                    # API endpoints and HTTP methods
+│   ├── routes/                    # API endpoints with Bearer Token verification
 │   ├── services/                  # Core business logic (Scraping, LLM, PR creation)
 │   ├── models/                    # Pydantic schemas (Request/Response models)
 │   ├── store.py                   # Cloud Firestore store & SQLite fallback
@@ -210,7 +213,7 @@ readme_architect/
     │       ├── history_panel.dart        # Date-grouped history with search & card action buttons
     │       ├── badge_selector.dart       # Interactive badge selector UI
     │       └── shared/                   # Shared UI components
-    │           ├── auth_dialog.dart      # Responsive Email/Password & Guest auth modal
+    │           ├── auth_dialog.dart      # Responsive Email/Password, 1-Click Google & Guest auth modal
     │           ├── url_input_field.dart  # Reusable GitHub URL input text field
     │           ├── mode_selector.dart    # Elevated segmented presentation mode toggle
     │           ├── generate_button.dart  # Primary action button with loading states
