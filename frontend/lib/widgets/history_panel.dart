@@ -1,13 +1,14 @@
 /// Premium history panel widget.
 ///
 /// Displays past README generations with search, date grouping, and
-/// styled entry cards. Responsive: sidebar panel on desktop, drawer on mobile.
-/// Supports tapping to restore, swipe-to-delete, and clear-all.
+/// styled entry cards with direct View, Copy, Download, and Delete actions.
+/// Responsive: sidebar panel on desktop, drawer on mobile.
 library;
 
 import 'package:flutter/material.dart';
 import '../models/history_entry.dart';
 import '../services/api_service.dart';
+import '../services/export_service.dart';
 
 /// Callback when the user taps a history entry to restore it.
 typedef OnHistorySelect = void Function(HistoryEntry entry);
@@ -78,6 +79,33 @@ class HistoryPanelState extends State<HistoryPanel>
           SnackBar(content: Text('Failed to delete: $e')),
         );
       }
+    }
+  }
+
+  void _copyEntry(HistoryEntry entry) {
+    ExportService.copyToClipboard(entry.markdown);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Copied ${entry.repoName} README to clipboard'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _downloadEntry(HistoryEntry entry) {
+    final success = ExportService.downloadMarkdownFile(
+      content: entry.markdown,
+      repoOwner: entry.repoOwner,
+      repoName: entry.repoName,
+    );
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloading files is not supported on this platform'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -592,6 +620,8 @@ class HistoryPanelState extends State<HistoryPanel>
                   modeColor: _modeBadgeColor(entry.presentationMode),
                   modeIcon: _modeIcon(entry.presentationMode),
                   onTap: () => widget.onSelect(entry),
+                  onCopy: () => _copyEntry(entry),
+                  onDownload: () => _downloadEntry(entry),
                   onDelete: () => _deleteEntry(entry.id),
                 )),
           ],
@@ -660,6 +690,8 @@ class _HistoryEntryCard extends StatefulWidget {
   final Color modeColor;
   final IconData modeIcon;
   final VoidCallback onTap;
+  final VoidCallback onCopy;
+  final VoidCallback onDownload;
   final VoidCallback onDelete;
 
   const _HistoryEntryCard({
@@ -667,6 +699,8 @@ class _HistoryEntryCard extends StatefulWidget {
     required this.modeColor,
     required this.modeIcon,
     required this.onTap,
+    required this.onCopy,
+    required this.onDownload,
     required this.onDelete,
   });
 
@@ -788,27 +822,67 @@ class _HistoryEntryCardState extends State<_HistoryEntryCard> {
                   ),
                 ),
 
-                // ── Delete button (visible on hover or always on mobile) ──
-                AnimatedOpacity(
-                  opacity: _isHovered ? 1.0 : 0.3,
-                  duration: const Duration(milliseconds: 200),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: widget.onDelete,
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 14,
-                          color: cs.onSurface.withAlpha(80),
-                        ),
-                      ),
+                // ── Quick action buttons (View, Copy, Download, Delete) ──
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _CardActionButton(
+                      icon: Icons.content_copy_rounded,
+                      tooltip: 'Copy Markdown',
+                      cs: cs,
+                      onTap: widget.onCopy,
                     ),
-                  ),
+                    _CardActionButton(
+                      icon: Icons.download_rounded,
+                      tooltip: 'Download .md',
+                      cs: cs,
+                      onTap: widget.onDownload,
+                    ),
+                    _CardActionButton(
+                      icon: Icons.close_rounded,
+                      tooltip: 'Delete',
+                      cs: cs,
+                      onTap: widget.onDelete,
+                    ),
+                  ],
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CardActionButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final ColorScheme cs;
+  final VoidCallback onTap;
+
+  const _CardActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.cs,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Icon(
+              icon,
+              size: 15,
+              color: cs.onSurface.withAlpha(100),
             ),
           ),
         ),
