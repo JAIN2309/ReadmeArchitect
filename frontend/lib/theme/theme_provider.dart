@@ -18,4 +18,14 @@ class ThemeProvider {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isDarkMode', !isDark);
   }
+
+  static Future<void> setThemeMode(ThemeMode mode) async {
+    themeModeNotifier.value = mode;
+    final prefs = await SharedPreferences.getInstance();
+    if (mode == ThemeMode.system) {
+      await prefs.remove('isDarkMode');
+    } else {
+      await prefs.setBool('isDarkMode', mode == ThemeMode.dark);
+    }
+  }
 }
