@@ -2,7 +2,7 @@
 library;
 
 class HistoryEntry {
-  final int id;
+  final Object id;
   final String githubUrl;
   final String repoOwner;
   final String repoName;
@@ -22,13 +22,13 @@ class HistoryEntry {
 
   factory HistoryEntry.fromJson(Map<String, dynamic> json) {
     return HistoryEntry(
-      id: json['id'] as int,
-      githubUrl: json['github_url'] as String,
-      repoOwner: json['repo_owner'] as String,
-      repoName: json['repo_name'] as String,
-      presentationMode: json['presentation_mode'] as String,
-      markdown: json['markdown'] as String,
-      createdAt: json['created_at'] as String,
+      id: json['id'] ?? 'doc_0',
+      githubUrl: json['github_url'] as String? ?? '',
+      repoOwner: json['repo_owner'] as String? ?? '',
+      repoName: json['repo_name'] as String? ?? '',
+      presentationMode: json['presentation_mode'] as String? ?? 'Basic',
+      markdown: json['markdown'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
     );
   }
 

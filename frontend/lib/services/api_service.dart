@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/history_entry.dart';
+import 'auth_service.dart';
 
 /// Response model returned by the API.
 class ReadmeResult {
@@ -39,65 +40,36 @@ class ReadmeResult {
 /// Service that calls the FastAPI backend endpoints.
 class ApiService {
   /// Base URL of the running FastAPI server.
-  /// On production (GitHub Pages), points to the Render deployment.
-  /// On local development, points to localhost:8000.
   static String get _baseUrl {
     if (kIsWeb) {
-      // If running on GitHub Pages (or any non-localhost web host),
-      // use the Render backend URL.
       final host = Uri.base.host;
       if (host == 'localhost' || host == '127.0.0.1') {
         return 'http://localhost:8000';
       }
       return 'https://readmearchitect.onrender.com';
     }
-    // Native mobile — point to Render URL for production.
     if (kDebugMode) {
-      // For local emulator testing (uncomment 10.0.2.2 if on Android emulator)
-      return 'http://localhost:8000'; 
+      return 'http://localhost:8000';
     }
     return 'https://readmearchitect.onrender.com';
   }
 
-  static Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'X-Session-ID': _sessionId,
-  };
-
-  /// Generate a README by sending the [githubUrl] and [presentationMode]
-  /// to the backend.
-  ///
-  /// Returns a [ReadmeResult] on success, or throws an [Exception] on failure.
-  static Future<ReadmeResult> generateReadme({
-    required String githubUrl,
-    required String presentationMode,
-    String? githubToken,
-  }) async {
-    final uri = Uri.parse('$_baseUrl/api/auto-readme');
-
-    final bodyData = <String, dynamic>{
-      'github_url': githubUrl,
-      'presentation_mode': presentationMode,
-    };
-    if (githubToken != null && githubToken.isNotEmpty) {
-      bodyData['github_token'] = githubToken;
-    }
-
-    final response = await http.post(
-      uri,
-      headers: _headers,
-      body: jsonEncode(bodyData),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return ReadmeResult.fromJson(data);
-    } else {
-      throw Exception(_extractError(response));
-    }
-  }
-
   static String _sessionId = 'default';
+
+  /// Generate headers with Session ID and optional Firebase ID Token Bearer
+  static Future<Map<String, String>> _getHeaders() async {
+    final activeUid = AuthService.currentUser?.uid ?? _sessionId;
+    final token = await AuthService.getIdToken();
+
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'X-Session-ID': activeUid,
+    };
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
 
   /// Initialize the session ID. Call this on app startup.
   static Future<void> initSession() async {
@@ -120,12 +92,45 @@ class ApiService {
     _sessionId = sid;
   }
 
+  /// Generate a README by sending the [githubUrl] and [presentationMode]
+  /// to the backend.
+  static Future<ReadmeResult> generateReadme({
+    required String githubUrl,
+    required String presentationMode,
+    String? githubToken,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/auto-readme');
+
+    final bodyData = <String, dynamic>{
+      'github_url': githubUrl,
+      'presentation_mode': presentationMode,
+    };
+    if (githubToken != null && githubToken.isNotEmpty) {
+      bodyData['github_token'] = githubToken;
+    }
+
+    final headers = await _getHeaders();
+    final response = await http.post(
+      uri,
+      headers: headers,
+      body: jsonEncode(bodyData),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return ReadmeResult.fromJson(data);
+    } else {
+      throw Exception(_extractError(response));
+    }
+  }
+
   // ── History API ────────────────────────────────────────────────────────
 
   /// Fetch all history entries (newest first).
   static Future<List<HistoryEntry>> getHistory() async {
     final uri = Uri.parse('$_baseUrl/api/history');
-    final response = await http.get(uri, headers: {'X-Session-ID': _sessionId});
+    final headers = await _getHeaders();
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode == 200) {
       final list = jsonDecode(response.body) as List<dynamic>;
@@ -138,9 +143,10 @@ class ApiService {
   }
 
   /// Delete a single history entry by [entryId].
-  static Future<void> deleteHistoryEntry(int entryId) async {
+  static Future<void> deleteHistoryEntry(Object entryId) async {
     final uri = Uri.parse('$_baseUrl/api/history/$entryId');
-    final response = await http.delete(uri, headers: {'X-Session-ID': _sessionId});
+    final headers = await _getHeaders();
+    final response = await http.delete(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(_extractError(response));
@@ -150,7 +156,8 @@ class ApiService {
   /// Clear all history entries.
   static Future<void> clearHistory() async {
     final uri = Uri.parse('$_baseUrl/api/history');
-    final response = await http.delete(uri, headers: {'X-Session-ID': _sessionId});
+    final headers = await _getHeaders();
+    final response = await http.delete(uri, headers: headers);
 
     if (response.statusCode != 200) {
       throw Exception(_extractError(response));
@@ -164,9 +171,10 @@ class ApiService {
     required String markdown,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/create-pr');
+    final headers = await _getHeaders();
     final response = await http.post(
       uri,
-      headers: _headers,
+      headers: headers,
       body: jsonEncode({
         'github_url': githubUrl,
         'github_token': githubToken,
@@ -182,18 +190,12 @@ class ApiService {
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────
-
   static String _extractError(http.Response response) {
-    String message = 'Request failed with status ${response.statusCode}';
     try {
-      final errorData = jsonDecode(response.body) as Map<String, dynamic>;
-      if (errorData.containsKey('detail')) {
-        message = errorData['detail'].toString();
-      }
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      return json['detail'] as String? ?? 'Request failed (${response.statusCode})';
     } catch (_) {
-      // Ignore JSON parse errors on the error body.
+      return 'Request failed (${response.statusCode}): ${response.body}';
     }
-    return message;
   }
 }

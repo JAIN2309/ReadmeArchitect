@@ -101,6 +101,26 @@ class _AuthDialogState extends State<AuthDialog>
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      await AuthService.signInWithGoogle();
+      if (!mounted) return;
+      widget.onAuthSuccess?.call();
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('Exception: ', '');
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleGuestLogin() async {
     setState(() {
       _isLoading = true;
@@ -420,6 +440,33 @@ class _AuthDialogState extends State<AuthDialog>
         ),
 
         const SizedBox(height: 20),
+
+        // ── 1-Click Google Sign In ───────────────────────
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _isLoading ? null : _handleGoogleLogin,
+            icon: Icon(Icons.g_mobiledata_rounded,
+                size: 22, color: cs.primary),
+            label: Text(
+              'Sign In with Google',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: cs.primary.withAlpha(50)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
 
         // ── Guest Session Option ───────────────────────────
         SizedBox(

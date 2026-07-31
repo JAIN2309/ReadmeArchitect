@@ -1,9 +1,10 @@
-/// Authentication service wrapping Firebase Auth & Guest Mode session tracking.
+/// Authentication service wrapping Firebase Auth, Google Sign-In & Guest Session tracking.
 library;
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AppUser {
   final String uid;
@@ -59,6 +60,42 @@ class AuthService {
   static AppUser? get currentUser => userNotifier.value;
   static bool get isLoggedIn => userNotifier.value != null;
 
+  /// Fetch Firebase ID token for secure API requests
+  static Future<String?> getIdToken() async {
+    if (_isFirebaseInitialized && FirebaseAuth.instance.currentUser != null) {
+      return await FirebaseAuth.instance.currentUser!.getIdToken();
+    }
+    return null;
+  }
+
+  /// Sign in with 1-Click Google Provider
+  static Future<AppUser> signInWithGoogle() async {
+    if (_isFirebaseInitialized) {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        throw Exception('Google Sign-In canceled by user.');
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = AppUser.fromFirebase(userCred.user!);
+      userNotifier.value = user;
+      return user;
+    }
+
+    final user = const AppUser(
+      uid: 'google_user_demo',
+      email: 'developer@gmail.com',
+      displayName: 'Google Developer',
+    );
+    userNotifier.value = user;
+    return user;
+  }
+
   /// Sign in with Email and Password
   static Future<AppUser> signInWithEmail(String email, String password) async {
     if (_isFirebaseInitialized) {
@@ -70,7 +107,7 @@ class AuthService {
       userNotifier.value = user;
       return user;
     }
-    // Session fallback for demo
+
     final user = AppUser(
       uid: 'user_${email.hashCode}',
       email: email,

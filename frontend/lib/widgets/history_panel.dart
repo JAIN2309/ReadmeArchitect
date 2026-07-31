@@ -69,7 +69,7 @@ class HistoryPanelState extends State<HistoryPanel>
     }
   }
 
-  Future<void> _deleteEntry(int id) async {
+  Future<void> _deleteEntry(Object id) async {
     try {
       await ApiService.deleteHistoryEntry(id);
       setState(() => _entries.removeWhere((e) => e.id == id));
