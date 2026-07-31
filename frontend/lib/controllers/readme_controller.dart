@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/history_entry.dart';
 import '../services/api_service.dart';
 import '../services/export_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/shared/auth_dialog.dart';
 
 class ReadmeController extends ChangeNotifier {
   final TextEditingController urlController = TextEditingController();
@@ -76,12 +78,22 @@ class ReadmeController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> generate(VoidCallback onSuccess) async {
+  Future<void> generate(BuildContext context, VoidCallback onSuccess) async {
     final url = urlController.text.trim();
     if (url.isEmpty) {
       errorMessage = 'Please enter a GitHub repository URL.';
       notifyListeners();
       return;
+    }
+
+    // Gate generation behind authentication
+    if (!AuthService.isLoggedIn) {
+      final authenticated = await AuthDialog.show(context);
+      if (!authenticated) {
+        errorMessage = 'Sign in required to generate & save READMEs.';
+        notifyListeners();
+        return;
+      }
     }
 
     isLoading = true;

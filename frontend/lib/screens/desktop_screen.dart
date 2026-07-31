@@ -13,6 +13,8 @@ import '../widgets/shared/url_input_field.dart';
 import '../widgets/shared/mode_selector.dart';
 import '../widgets/shared/generate_button.dart';
 import '../widgets/shared/settings_dialog.dart';
+import '../widgets/shared/auth_dialog.dart';
+import '../services/auth_service.dart';
 import '../controllers/readme_controller.dart';
 
 class DesktopScreen extends StatefulWidget {
@@ -38,6 +40,7 @@ class _DesktopScreenState extends State<DesktopScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+    AuthService.initialize();
   }
 
   @override
@@ -109,7 +112,7 @@ class _DesktopScreenState extends State<DesktopScreen>
     final cs = Theme.of(context).colorScheme;
 
     return ListenableBuilder(
-      listenable: _controller,
+      listenable: Listenable.merge([_controller, AuthService.userNotifier]),
       builder: (context, child) {
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -135,6 +138,8 @@ class _DesktopScreenState extends State<DesktopScreen>
   // ── Toolbar ────────────────────────────────────────────────────────────
 
   Widget _buildToolbar(ColorScheme cs) {
+    final user = AuthService.currentUser;
+
     return Container(
       height: 56,
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -165,7 +170,7 @@ class _DesktopScreenState extends State<DesktopScreen>
           Expanded(
             child: UrlInputField(
               controller: _controller.urlController,
-              onSubmitted: () => _controller.generate(() => _historyKey.currentState?.refresh()),
+              onSubmitted: () => _controller.generate(context, () => _historyKey.currentState?.refresh()),
               height: 38,
               fontSize: 13,
               borderRadius: 10,
@@ -208,12 +213,28 @@ class _DesktopScreenState extends State<DesktopScreen>
             onPressed: _showSettingsDialog,
           ),
 
+          const SizedBox(width: 4),
+
+          // Auth / User Profile Button
+          _ToolbarButton(
+            icon: user != null ? Icons.account_circle_rounded : Icons.lock_outline_rounded,
+            tooltip: user != null ? 'Signed in as ${user.displayName}' : 'Sign In',
+            onPressed: () {
+              if (user == null) {
+                AuthDialog.show(context);
+              } else {
+                AuthService.signOut();
+                _showSnack('Signed out');
+              }
+            },
+          ),
+
           const SizedBox(width: 12),
 
           // Generate
           GenerateButton(
             isLoading: _controller.isLoading,
-            onPressed: () => _controller.generate(() => _historyKey.currentState?.refresh()),
+            onPressed: () => _controller.generate(context, () => _historyKey.currentState?.refresh()),
             height: 38,
             padding: const EdgeInsets.symmetric(horizontal: 22),
             fontSize: 13,

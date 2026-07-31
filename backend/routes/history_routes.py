@@ -11,7 +11,7 @@ async def get_history(request: Request):
     return store.get_history(session_id)
 
 @router.delete("/api/history/{entry_id}")
-async def delete_history_entry(request: Request, entry_id: int):
+async def delete_history_entry(request: Request, entry_id: str):
     """Delete a single history entry by ID."""
     session_id = request.headers.get("X-Session-ID", "default")
     entry = store.delete_history_entry(session_id, entry_id)

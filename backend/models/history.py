@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from .base import PresentationMode
 
 class HistoryEntry(BaseModel):
-    id: int
+    id: int | str | None = None
     github_url: str
     repo_owner: str
     repo_name: str

@@ -15,6 +15,8 @@ import '../widgets/shared/url_input_field.dart';
 import '../widgets/shared/mode_selector.dart';
 import '../widgets/shared/generate_button.dart';
 import '../widgets/shared/settings_dialog.dart';
+import '../widgets/shared/auth_dialog.dart';
+import '../services/auth_service.dart';
 import '../controllers/readme_controller.dart';
 
 class MobileScreen extends StatefulWidget {
@@ -40,6 +42,7 @@ class _MobileScreenState extends State<MobileScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    AuthService.initialize();
   }
 
   @override
@@ -81,7 +84,7 @@ class _MobileScreenState extends State<MobileScreen>
     final cs = Theme.of(context).colorScheme;
 
     return ListenableBuilder(
-      listenable: _controller,
+      listenable: Listenable.merge([_controller, AuthService.userNotifier]),
       builder: (context, child) {
         final hasOutput = _controller.generatedMarkdown.isNotEmpty;
         final hasBadgeData = hasOutput &&
@@ -114,7 +117,7 @@ class _MobileScreenState extends State<MobileScreen>
                         controller: _controller.urlController,
                         onSubmitted: () {
                           _controller.generate(
-                              () => _historyKey.currentState?.refresh());
+                              context, () => _historyKey.currentState?.refresh());
                           setState(() => _isPreview = true);
                         },
                       ),
@@ -133,7 +136,7 @@ class _MobileScreenState extends State<MobileScreen>
                         isLoading: _controller.isLoading,
                         onPressed: () {
                           _controller.generate(
-                              () => _historyKey.currentState?.refresh());
+                              context, () => _historyKey.currentState?.refresh());
                           setState(() => _isPreview = true);
                         },
                         height: 48,
@@ -165,6 +168,8 @@ class _MobileScreenState extends State<MobileScreen>
 
   PreferredSizeWidget _buildAppBar(
       ColorScheme cs, bool hasOutput, bool hasBadgeData) {
+    final user = AuthService.currentUser;
+
     return AppBar(
       backgroundColor: cs.surface,
       elevation: 0,
@@ -212,6 +217,19 @@ class _MobileScreenState extends State<MobileScreen>
         _MobileAppBarButton(
           icon: Icons.settings_rounded,
           onTap: _showSettingsDialog,
+        ),
+        // Auth / User Profile Button
+        _MobileAppBarButton(
+          icon: user != null ? Icons.account_circle_rounded : Icons.lock_outline_rounded,
+          color: user != null ? cs.primary : null,
+          onTap: () {
+            if (user == null) {
+              AuthDialog.show(context);
+            } else {
+              AuthService.signOut();
+              _showSnack('Signed out');
+            }
+          },
         ),
         // Badges (conditional)
         if (hasBadgeData)
