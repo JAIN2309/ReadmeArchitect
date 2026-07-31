@@ -61,38 +61,38 @@ A **production-grade AI documentation engine** connecting developers with automa
 <td width="33%" valign="top">
 
 ### 💻 Desktop/Web Frontend
-- Sleek, side-by-side **split pane** layout with live rendering
-- **Interactive Markdown Editor** — tweak the AI output before exporting
-- **Direct GitHub Integration** — push generated READMEs directly via Pull Request using a Personal Access Token
-- **Interactive Badge Selector** — inject live Shields.io badges (License, Stars, Forks, etc.) with a visual UI
-- **Theme Engine** — toggle instantly between pristine Light Mode and premium Dark Mode
-- Collapsible **History Sidebar** with animated open/close
-- One-click **copy** & `.md` **download** (browser file save)
-- Color-coded **mode badges** and **time-ago labels** on history entries
-- **Mock Fallback Banners** — explicit visual warnings when GitHub API hits rate limits
+- **Vertical Icon Sidebar** — quick access to History, Badges, Copy, PR creation, and File Export
+- **Line-Numbered Source Editor** — full line-numbered gutter with raw Markdown editing
+- **Live Preview Pane** — real-time rendered preview with live `● SYNCING` indicator
+- **Direct GitHub Integration** — push generated READMEs directly via Pull Request using Personal Access Tokens
+- **Interactive Badge Selector** — inject live Shields.io badges (License, Stars, Forks, etc.)
+- **Responsive Settings Modal** — centered dialog on desktop / bottom sheet on mobile
+- **Theme Engine** — Light, Dark, and System mode persistence with active pill selectors
+- **Enhanced History Panel** — search bar filter, date grouping (Today, Yesterday, etc.), and quick action card buttons (View, Copy, Download, Delete)
 
 </td>
 <td width="33%" valign="top">
 
 ### 📱 Native Mobile Frontend
 - Single-column, thumb-friendly vertical scroll layout
-- **Tabbed Live Preview** — switch seamlessly between Editor and Rendered Preview
+- **Segmented Edit / Preview Toggle** — switch seamlessly between Editor and Rendered Preview
+- **Quick Action Bottom Bar** — one-tap Copy, PR creation, and File Export
 - **Direct GitHub Integration** — push your README directly via PR from your phone
-- **Theme Engine & Badge Selector** — full feature parity with desktop
-- Beautiful **Onboarding Guide Map** with glowing aesthetics
+- **Custom App Icon & Splash** — dark navy/charcoal logo with native Android 12+ splash support
+- **5-Step Onboarding Walkthrough** — card-based tour with feature highlights
 - **Drawer-based History Panel** accessible via AppBar icon
-- Delete individual history entries or **clear all** with confirmation dialog
-- Instant **clipboard fallback** if browser downloads aren't supported
+- Delete individual entries or **clear all** with modal confirmation
+- **Android Gradle Plugin 8.9.1 & Kotlin 2.2.20** — updated build chain with full AndroidX compatibility
 
 </td>
 </tr>
 </table>
 
 ### 🎬 Shared Experience
-- **App Theming Engine** — dynamically built from the ground up to support both deep, Linear-inspired dark mode and clean, Apple-style light mode, persisted locally.
-- **Animated Splash Screen** — 6-stage staggered animation sequence.
-- **4-Step Interactive Onboarding** — Paste URL → Select Mode → Preview → Export/History.
-- **Responsive Platform Detection** — auto-routes to Mobile or Desktop layout based on runtime environment.
+- **App Theming Engine** — dynamically built from the ground up supporting Slate Light (`#F8FAFC`), Zinc Dark (`#09090B`), and System Auto modes.
+- **Animated Splash Screen** — 6-stage staggered entrance with custom app branding.
+- **5-Step Interactive Onboarding** — Paste URL → Select Mode → Preview → GitHub PR → Export/History.
+- **Responsive Platform Routing** — auto-routes to Mobile or Desktop layout based on screen width and device capabilities.
 
 ---
 
@@ -153,7 +153,9 @@ While the core experience is highly polished, the following features are planned
 | **universal_html** | Web-based file downloads (Blob + AnchorElement) and browser user-agent detection for platform routing |
 | **http** | HTTP client connecting to the FastAPI backend |
 | **uuid** | Generates unique session identifiers for isolated backend history |
-| **Linear-style UI** | Custom built design system — deep `#0D0D1A` backgrounds, `#6C63FF` accent gradients, glowing borders, smooth fade transitions |
+| **flutter_launcher_icons** | Automated multi-density Android mipmap & Web PWA icon generator |
+| **flutter_native_splash** | OS-level Android 12+ and legacy launch splash screen orchestrator |
+| **Slate & Zinc Theme System** | Custom modern design system — Slate light (`#F8FAFC`), Zinc dark (`#09090B`), vibrant blue accent (`#3B82F6`), line-numbered editor, elevated segmented controls |
 
 </details>
 
@@ -163,7 +165,7 @@ While the core experience is highly polished, the following features are planned
 
 ```text
 readme_architect/
-├── 📄 README.md                   # This file
+├── 📄 README.md                   # Project documentation
 ├── 📄 ROADMAP.md                  # Setup & run guide with troubleshooting
 ├── 📄 LICENSE                     # MIT License
 ├── 📁 readme_assets/              # Screenshots and visual branding assets
@@ -173,36 +175,39 @@ readme_architect/
 │   ├── routes/                    # API endpoints and HTTP methods
 │   ├── services/                  # Core business logic (Scraping, LLM, PR creation)
 │   ├── models/                    # Pydantic schemas (Request/Response models)
-│   ├── store.py                   # In-memory history state management
+│   ├── store.py                   # SQLite session history management
 │   ├── requirements.txt           # Python dependencies
 │   ├── .env.example               # Environment template (Needs GEMINI_API_KEY)
 │   └── .gitignore                 # Excludes venv, .env, __pycache__
 │
 └── 📁 frontend/
+    ├── assets/
+    │   └── app_icon.png          # Master 1024x1024 app icon asset
     ├── lib/
     │   ├── main.dart                    # App entry point, MaterialApp theme config
     │   ├── models/
     │   │   └── history_entry.dart        # History data model with time-ago formatting
     │   ├── screens/
     │   │   ├── splash_screen.dart        # 6-stage animated startup sequence
-    │   │   ├── onboarding_screen.dart    # 4-step interactive guide map
-    │   │   ├── desktop_screen.dart       # Side-by-side split-pane web/desktop view
-    │   │   └── mobile_screen.dart        # Vertical single-column mobile view
+    │   │   ├── onboarding_screen.dart    # 5-step interactive card-based walkthrough
+    │   │   ├── desktop_screen.dart       # Sidebar + line-numbered split-pane view
+    │   │   └── mobile_screen.dart        # Segmented view with bottom quick actions
     │   ├── services/
     │   │   ├── api_service.dart          # HTTP client to backend (generate + history CRUD)
     │   │   └── export_service.dart       # Web download (Blob) / Clipboard fallback logic
     │   ├── theme/
-    │   │   └── theme_provider.dart       # Core Theme Engine (Dark/Light mode support)
+    │   │   ├── app_theme.dart            # Slate & Zinc design system definitions
+    │   │   └── theme_provider.dart       # Light, Dark & System ThemeMode persistence
     │   ├── utils/
-    │   │   └── platform_detector.dart    # Responsive routing (Android vs Chrome/Edge)
+    │   │   └── platform_detector.dart    # Responsive routing (Mobile vs Web/Desktop)
     │   └── widgets/
-    │       ├── history_panel.dart        # Reusable history list (delete, clear all, retry)
+    │       ├── history_panel.dart        # Date-grouped history with search & card action buttons
     │       ├── badge_selector.dart       # Interactive badge selector UI
-    │       └── shared/                   # Shared UI components seamlessly integrated with the Theme Engine
+    │       └── shared/                   # Shared UI components
     │           ├── url_input_field.dart  # Reusable GitHub URL input text field
-    │           ├── mode_selector.dart    # Animated presentation mode toggle
+    │           ├── mode_selector.dart    # Elevated segmented presentation mode toggle
     │           ├── generate_button.dart  # Primary action button with loading states
-    │           └── settings_dialog.dart  # GitHub token configuration dialog
+    │           └── settings_dialog.dart  # Responsive settings dialog / bottom sheet
     └── pubspec.yaml
 ```
 
@@ -290,9 +295,9 @@ All endpoints are served by the FastAPI backend at `http://localhost:8000`.
 | Method | Endpoint | Description | Request Body |
 |--------|----------|-------------|-------------|
 | `POST` | `/api/auto-readme` | Generate a README for a public GitHub repo | `{ "github_url": "https://github.com/owner/repo", "presentation_mode": "Basic" \| "Advanced" \| "Professional" }` |
-| `GET` | `/api/history` | Fetch all past generations (newest first) | — |
+| `GET` | `/api/history` | Fetch all past generations for the user's session | — |
 | `DELETE` | `/api/history/{entry_id}` | Delete a single history entry by ID | — |
-| `DELETE` | `/api/history` | Clear all history entries | — |
+| `DELETE` | `/api/history` | Clear all history entries for the user's session | — |
 | `GET` | `/health` | Health check | — |
 
 ### Example: Generate a README
@@ -365,8 +370,6 @@ From Swagger, you can test all endpoints directly — click **Try it out** on an
 
 ---
 
-<div align="center">
-
 ## 👤 Author
 **Krish Jain**
 
@@ -377,5 +380,3 @@ From Swagger, you can test all endpoints directly — click **Try it out** on an
 <br/>
 
 *Architecting the future of documentation.* 📝
-
-</div>
