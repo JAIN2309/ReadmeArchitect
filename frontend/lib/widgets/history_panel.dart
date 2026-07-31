@@ -1,9 +1,8 @@
-/// Reusable history panel widget.
+/// Premium history panel widget.
 ///
-/// Displays past README generations in a scrollable list. Supports:
-/// - Tapping an entry to restore its markdown
-/// - Swiping / icon-button to delete individual entries
-/// - Clear-all button in the header
+/// Displays past README generations with search, date grouping, and
+/// styled entry cards. Responsive: sidebar panel on desktop, drawer on mobile.
+/// Supports tapping to restore, swipe-to-delete, and clear-all.
 library;
 
 import 'package:flutter/material.dart';
@@ -22,15 +21,32 @@ class HistoryPanel extends StatefulWidget {
   State<HistoryPanel> createState() => HistoryPanelState();
 }
 
-class HistoryPanelState extends State<HistoryPanel> {
+class HistoryPanelState extends State<HistoryPanel>
+    with SingleTickerProviderStateMixin {
   List<HistoryEntry> _entries = [];
   bool _isLoading = true;
   String? _error;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  late AnimationController _fadeController;
+  late Animation<double> _fadeIn;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeIn = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
     refresh();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _fadeController.dispose();
+    super.dispose();
   }
 
   /// Reload history from the backend. Can be called externally.
@@ -41,7 +57,10 @@ class HistoryPanelState extends State<HistoryPanel> {
     });
     try {
       final entries = await ApiService.getHistory();
-      if (mounted) setState(() => _entries = entries);
+      if (mounted) {
+        setState(() => _entries = entries);
+        _fadeController.forward(from: 0);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -55,39 +74,121 @@ class HistoryPanelState extends State<HistoryPanel> {
       setState(() => _entries.removeWhere((e) => e.id == id));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
       }
     }
   }
 
   Future<void> _clearAll() async {
+    final cs = Theme.of(context).colorScheme;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
-        title: Text(
-          'Clear History',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-        ),
-        content: Text(
-          'Delete all past generations? This cannot be undone.',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+      barrierColor: Colors.black54,
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 360,
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cs.onSurface.withAlpha(15)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(40),
+                  blurRadius: 40,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Warning icon
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withAlpha(15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.delete_forever_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Clear All History',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This will permanently delete all ${_entries.length} generation records. This cannot be undone.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cs.onSurface.withAlpha(140),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: cs.onSurface.withAlpha(160),
+                          side: BorderSide(
+                              color: cs.onSurface.withAlpha(25)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: const Text('Cancel',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 13)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEF4444),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: const Icon(Icons.delete_sweep_rounded,
+                            size: 16),
+                        label: const Text('Clear All',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-            child: const Text('Clear All'),
-          ),
-        ],
       ),
     );
 
@@ -97,12 +198,25 @@ class HistoryPanelState extends State<HistoryPanel> {
         setState(() => _entries.clear());
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to clear: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to clear: $e')),
+          );
         }
       }
     }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+
+  List<HistoryEntry> get _filteredEntries {
+    if (_searchQuery.isEmpty) return _entries;
+    final q = _searchQuery.toLowerCase();
+    return _entries
+        .where((e) =>
+            e.repoName.toLowerCase().contains(q) ||
+            e.repoOwner.toLowerCase().contains(q) ||
+            e.presentationMode.toLowerCase().contains(q))
+        .toList();
   }
 
   Color _modeBadgeColor(String mode) {
@@ -114,146 +228,424 @@ class HistoryPanelState extends State<HistoryPanel> {
     };
   }
 
+  IconData _modeIcon(String mode) {
+    return switch (mode) {
+      'Basic' => Icons.article_rounded,
+      'Advanced' => Icons.dashboard_rounded,
+      'Professional' => Icons.business_center_rounded,
+      _ => Icons.description_rounded,
+    };
+  }
+
+  String _dateGroupLabel(String createdAt) {
+    try {
+      final dt = DateTime.parse(createdAt);
+      final now = DateTime.now().toUtc();
+      final diff = now.difference(dt);
+
+      if (diff.inHours < 24 && dt.day == now.day) return 'Today';
+      if (diff.inHours < 48) return 'Yesterday';
+      if (diff.inDays < 7) return 'This Week';
+      if (diff.inDays < 30) return 'This Month';
+      return 'Earlier';
+    } catch (_) {
+      return 'Earlier';
+    }
+  }
+
+  // ── Build ──────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Header ──
+          _buildHeader(cs),
+          if (!_isLoading && _error == null && _entries.isNotEmpty)
+            _buildSearchBar(cs),
+          Expanded(child: _buildBody(cs)),
+          if (_entries.isNotEmpty) _buildFooter(cs),
+        ],
+      ),
+    );
+  }
+
+  // ── Header ─────────────────────────────────────────────────────────────
+
+  Widget _buildHeader(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
+      child: Row(
+        children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(15),
-                ),
-              ),
+              color: cs.primary.withAlpha(20),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Row(
+            child:
+                Icon(Icons.history_rounded, color: cs.primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.history,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Generation History',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
+                Text(
+                  'Generation History',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                    letterSpacing: -0.3,
                   ),
                 ),
-                if (_entries.isNotEmpty)
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_sweep,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(100),
-                      size: 20,
-                    ),
-                    tooltip: 'Clear all',
-                    onPressed: _clearAll,
+                const SizedBox(height: 2),
+                Text(
+                  'Review and manage past generations',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurface.withAlpha(100),
                   ),
+                ),
               ],
             ),
           ),
+          // Refresh
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: refresh,
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: cs.onSurface.withAlpha(8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.refresh_rounded,
+                    color: cs.onSurface.withAlpha(100), size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-          // ── Body ──
-          Expanded(
-            child: _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  )
-                : _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.cloud_off,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(60),
-                            size: 36,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Could not load history',
-                            style: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withAlpha(80),
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          TextButton.icon(
-                            onPressed: refresh,
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : _entries.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(40),
-                          size: 44,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No generations yet',
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(60),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: _entries.length,
-                    separatorBuilder: (_, i) => Divider(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(8),
-                      height: 1,
-                    ),
-                    itemBuilder: (context, index) {
-                      final entry = _entries[index];
-                      return _HistoryTile(
-                        entry: entry,
-                        badgeColor: _modeBadgeColor(entry.presentationMode),
-                        onTap: () => widget.onSelect(entry),
-                        onDelete: () => _deleteEntry(entry.id),
-                      );
+  // ── Search bar ────────────────────────────────────────────────────────
+
+  Widget _buildSearchBar(ColorScheme cs) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: isDark
+              ? cs.surfaceContainerHigh
+              : cs.surfaceContainerHigh.withAlpha(120),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cs.onSurface.withAlpha(isDark ? 12 : 20)),
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (v) => setState(() => _searchQuery = v),
+          style: TextStyle(fontSize: 13, color: cs.onSurface),
+          decoration: InputDecoration(
+            hintText: 'Search history…',
+            hintStyle: TextStyle(
+              fontSize: 13,
+              color: cs.onSurface.withAlpha(60),
+            ),
+            prefixIcon: Icon(Icons.search_rounded,
+                size: 18, color: cs.onSurface.withAlpha(60)),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: Icon(Icons.close_rounded,
+                        size: 16, color: cs.onSurface.withAlpha(80)),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
                     },
-                  ),
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Body ──────────────────────────────────────────────────────────────
+
+  Widget _buildBody(ColorScheme cs) {
+    if (_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: cs.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Loading history…',
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurface.withAlpha(80),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return _buildErrorState(cs);
+    }
+
+    if (_entries.isEmpty) {
+      return _buildEmptyState(cs);
+    }
+
+    final filtered = _filteredEntries;
+    if (filtered.isEmpty) {
+      return _buildNoResultsState(cs);
+    }
+
+    return FadeTransition(
+      opacity: _fadeIn,
+      child: _buildGroupedList(filtered, cs),
+    );
+  }
+
+  Widget _buildErrorState(ColorScheme cs) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withAlpha(12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.cloud_off_rounded,
+                  color: Color(0xFFEF4444), size: 28),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Could not load history',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Check your connection and try again',
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurface.withAlpha(100),
+              ),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: refresh,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Retry'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: cs.primary,
+                side: BorderSide(color: cs.primary.withAlpha(50)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ColorScheme cs) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cs.primary.withAlpha(10),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.inbox_rounded,
+                  color: cs.primary.withAlpha(80), size: 32),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No generations yet',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Generate your first README to see it here',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurface.withAlpha(100),
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState(ColorScheme cs) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off_rounded,
+                color: cs.onSurface.withAlpha(40), size: 32),
+            const SizedBox(height: 12),
+            Text(
+              'No results for "$_searchQuery"',
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurface.withAlpha(100),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Grouped List ──────────────────────────────────────────────────────
+
+  Widget _buildGroupedList(List<HistoryEntry> entries, ColorScheme cs) {
+    // Group entries by date
+    final Map<String, List<HistoryEntry>> groups = {};
+    for (final entry in entries) {
+      final label = _dateGroupLabel(entry.createdAt);
+      groups.putIfAbsent(label, () => []).add(entry);
+    }
+
+    final groupOrder = ['Today', 'Yesterday', 'This Week', 'This Month', 'Earlier'];
+    final orderedKeys =
+        groupOrder.where((k) => groups.containsKey(k)).toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 8),
+      itemCount: orderedKeys.length,
+      itemBuilder: (context, groupIndex) {
+        final label = orderedKeys[groupIndex];
+        final items = groups[label]!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Group header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+              child: Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface.withAlpha(60),
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            // Entry cards
+            ...items.map((entry) => _HistoryEntryCard(
+                  entry: entry,
+                  modeColor: _modeBadgeColor(entry.presentationMode),
+                  modeIcon: _modeIcon(entry.presentationMode),
+                  onTap: () => widget.onSelect(entry),
+                  onDelete: () => _deleteEntry(entry.id),
+                )),
+          ],
+        );
+      },
+    );
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────
+
+  Widget _buildFooter(ColorScheme cs) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: cs.onSurface.withAlpha(10)),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Count badge
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              '${_entries.length} generation${_entries.length == 1 ? '' : 's'}',
+              style: TextStyle(
+                fontSize: 11,
+                color: cs.onSurface.withAlpha(60),
+              ),
+            ),
+          ),
+          // Clear all button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _clearAll,
+              icon: Icon(Icons.delete_sweep_rounded,
+                  size: 16, color: cs.onSurface.withAlpha(100)),
+              label: Text(
+                'Clear History',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurface.withAlpha(140),
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: cs.onSurface.withAlpha(20)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
           ),
         ],
       ),
@@ -261,96 +653,164 @@ class HistoryPanelState extends State<HistoryPanel> {
   }
 }
 
-// ── Individual history tile ──────────────────────────────────────────────
+// ── History Entry Card ──────────────────────────────────────────────────
 
-class _HistoryTile extends StatelessWidget {
+class _HistoryEntryCard extends StatefulWidget {
   final HistoryEntry entry;
-  final Color badgeColor;
+  final Color modeColor;
+  final IconData modeIcon;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
-  const _HistoryTile({
+  const _HistoryEntryCard({
     required this.entry,
-    required this.badgeColor,
+    required this.modeColor,
+    required this.modeIcon,
     required this.onTap,
     required this.onDelete,
   });
 
   @override
+  State<_HistoryEntryCard> createState() => _HistoryEntryCardState();
+}
+
+class _HistoryEntryCardState extends State<_HistoryEntryCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      splashColor: Theme.of(context).colorScheme.primary.withAlpha(20),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Row(
-          children: [
-            // Repo info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${entry.repoOwner}/${entry.repoName}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: _isHovered
+                  ? (isDark
+                      ? cs.surfaceContainerHigh
+                      : cs.surfaceContainerHigh.withAlpha(100))
+                  : (isDark
+                      ? cs.surface
+                      : cs.surfaceContainerHigh.withAlpha(50)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isHovered
+                    ? cs.primary.withAlpha(30)
+                    : cs.onSurface.withAlpha(isDark ? 10 : 15),
+              ),
+            ),
+            child: Row(
+              children: [
+                // ── Mode icon container ──
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: widget.modeColor.withAlpha(15),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: widget.modeColor.withAlpha(25)),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
+                  child: Icon(widget.modeIcon,
+                      size: 18, color: widget.modeColor),
+                ),
+                const SizedBox(width: 12),
+
+                // ── Info ──
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Mode badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withAlpha(25),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          entry.presentationMode,
-                          style: TextStyle(
-                            color: badgeColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Timestamp
                       Text(
-                        entry.timeAgo,
+                        widget.entry.repoName,
                         style: TextStyle(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurface.withAlpha(60),
-                          fontSize: 11,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          // Mode badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: widget.modeColor.withAlpha(20),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              widget.entry.presentationMode,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: widget.modeColor,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Dot separator
+                          Container(
+                            width: 3,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: cs.onSurface.withAlpha(40),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Time ago
+                          Expanded(
+                            child: Text(
+                              widget.entry.timeAgo,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: cs.onSurface.withAlpha(80),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            // Delete button
-            IconButton(
-              icon: Icon(
-                Icons.close,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurface.withAlpha(50),
-              ),
-              onPressed: onDelete,
-              tooltip: 'Remove',
-              splashRadius: 18,
+                // ── Delete button (visible on hover or always on mobile) ──
+                AnimatedOpacity(
+                  opacity: _isHovered ? 1.0 : 0.3,
+                  duration: const Duration(milliseconds: 200),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onDelete,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 14,
+                          color: cs.onSurface.withAlpha(80),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
