@@ -1,8 +1,8 @@
 /// Mobile-optimized screen for the Automated README Architect.
 ///
-/// Designed for native Android with a single-column vertical layout,
-/// large touch targets, scrollable markdown output, and action buttons
-/// for copy, download, and history.
+/// Premium single-column layout with clean AppBar, drawer history,
+/// and a tabbed editor/preview output area. Only existing functional
+/// components are shown.
 library;
 
 import 'package:flutter/material.dart';
@@ -29,7 +29,7 @@ class _MobileScreenState extends State<MobileScreen>
   final ReadmeController _controller = ReadmeController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<HistoryPanelState> _historyKey = GlobalKey<HistoryPanelState>();
-  
+
   bool _isPreview = true;
   late AnimationController _pulseController;
 
@@ -69,404 +69,506 @@ class _MobileScreenState extends State<MobileScreen>
       onTokenSaved: _controller.updateToken,
     );
   }
-  
+
   void _onHistorySelect(HistoryEntry entry) {
-    Navigator.pop(context); // close the drawer
+    Navigator.pop(context);
     _controller.onHistorySelect(entry);
     setState(() => _isPreview = true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, child) {
         final hasOutput = _controller.generatedMarkdown.isNotEmpty;
+        final hasBadgeData = hasOutput &&
+            _controller.repoOwner.isNotEmpty &&
+            _controller.repoName.isNotEmpty;
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text(
-          'README Architect',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-            letterSpacing: 0.5,
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+
+          // ── AppBar ──
+          appBar: _buildAppBar(cs, hasOutput, hasBadgeData),
+
+          // ── Drawer ──
+          drawer: _buildDrawer(cs),
+
+          body: SafeArea(
+            child: Column(
+              children: [
+                // ── Banners ──
+                _buildBanners(cs),
+
+                // ── Input Section ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      UrlInputField(
+                        controller: _controller.urlController,
+                        onSubmitted: () {
+                          _controller.generate(
+                              () => _historyKey.currentState?.refresh());
+                          setState(() => _isPreview = true);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      ModeSelector(
+                        modes: _controller.modes,
+                        selectedIndex: _controller.selectedModeIndex,
+                        onModeSelected: _controller.setModeIndex,
+                        isExpanded: true,
+                        borderRadius: 12,
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        fontSize: 13,
+                      ),
+                      const SizedBox(height: 12),
+                      GenerateButton(
+                        isLoading: _controller.isLoading,
+                        onPressed: () {
+                          _controller.generate(
+                              () => _historyKey.currentState?.refresh());
+                          setState(() => _isPreview = true);
+                        },
+                        height: 48,
+                        fontSize: 14,
+                        borderRadius: 12,
+                        icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // ── Output Section ──
+                if (hasOutput) _buildOutputToggle(cs),
+                Expanded(child: _buildOutputArea(cs, hasOutput)),
+
+                // ── Bottom Action Bar ──
+                if (hasOutput) _buildBottomBar(cs),
+              ],
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  // ── AppBar ─────────────────────────────────────────────────────────────
+
+  PreferredSizeWidget _buildAppBar(
+      ColorScheme cs, bool hasOutput, bool hasBadgeData) {
+    return AppBar(
+      backgroundColor: cs.surface,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      leading: GestureDetector(
+        onTap: () => _scaffoldKey.currentState?.openDrawer(),
+        child: Container(
+          margin: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: cs.primary.withAlpha(15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.history_rounded, color: cs.primary, size: 20),
         ),
-        centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: Icon(
-            Icons.history,
-            color: Theme.of(context).colorScheme.primary,
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome_rounded, color: cs.primary, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'ReadmeArchitect',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
           ),
-          tooltip: 'History',
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        actions: [
-          if (hasOutput && _controller.repoOwner.isNotEmpty && _controller.repoName.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.local_police),
-              tooltip: 'Add Badges',
-              color: Theme.of(context).colorScheme.primary,
-              onPressed: () {
-                BadgeSelector.show(
-                  context,
-                  repoOwner: _controller.repoOwner,
-                  repoName: _controller.repoName,
-                  initialSelectedKeys: _controller.selectedBadges,
-                  onApply: _controller.applyBadges,
-                );
-              },
-            ),
-          IconButton(
-            icon: Icon(
-              ThemeProvider.themeModeNotifier.value == ThemeMode.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            tooltip: 'Toggle Theme',
-            onPressed: () {
-              ThemeProvider.toggleTheme();
-              setState(() {}); // Rebuild to update icon
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings, size: 20),
-            tooltip: 'Settings (GitHub Token)',
-            onPressed: _showSettingsDialog,
-          ),
-          if (hasOutput) ...[
-            IconButton(
-              icon: const Icon(Icons.copy, size: 20),
-              tooltip: 'Copy markdown',
-              onPressed: () => _controller.copyToClipboard(_showSnack),
-            ),
-            IconButton(
-              icon: const Icon(Icons.merge_type, size: 20),
-              tooltip: 'Push to GitHub (Create PR)',
-              onPressed: () => _controller.createPullRequest(_showSnack),
-            ),
-            IconButton(
-              icon: const Icon(Icons.download, size: 20),
-              tooltip: 'Download .md',
-              onPressed: () => _controller.downloadFile(_showSnack),
-            ),
-          ],
         ],
       ),
+      centerTitle: true,
+      actions: [
+        // Theme toggle
+        _MobileAppBarButton(
+          icon: ThemeProvider.themeModeNotifier.value == ThemeMode.dark
+              ? Icons.light_mode_rounded
+              : Icons.dark_mode_rounded,
+          onTap: () {
+            ThemeProvider.toggleTheme();
+            setState(() {});
+          },
+        ),
+        // Settings
+        _MobileAppBarButton(
+          icon: Icons.settings_rounded,
+          onTap: _showSettingsDialog,
+        ),
+        // Badges (conditional)
+        if (hasBadgeData)
+          _MobileAppBarButton(
+            icon: Icons.verified_rounded,
+            color: cs.primary,
+            onTap: () {
+              BadgeSelector.show(
+                context,
+                repoOwner: _controller.repoOwner,
+                repoName: _controller.repoName,
+                initialSelectedKeys: _controller.selectedBadges,
+                onApply: _controller.applyBadges,
+              );
+            },
+          ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
 
-      // ── History drawer ──
-      drawer: Drawer(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        child: SafeArea(
-          child: HistoryPanel(key: _historyKey, onSelect: _onHistorySelect),
+  // ── Drawer ─────────────────────────────────────────────────────────────
+
+  Widget _buildDrawer(ColorScheme cs) {
+    return Drawer(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        child: HistoryPanel(key: _historyKey, onSelect: _onHistorySelect),
+      ),
+    );
+  }
+
+  // ── Banners ────────────────────────────────────────────────────────────
+
+  Widget _buildBanners(ColorScheme cs) {
+    return Column(
+      children: [
+        if (_controller.errorMessage != null)
+          _MobileBanner(
+            icon: Icons.error_outline_rounded,
+            message: _controller.errorMessage!,
+            color: const Color(0xFFEF4444),
+            onDismiss: _controller.clearError,
+          ),
+        if (_controller.isMock)
+          const _MobileBanner(
+            icon: Icons.warning_amber_rounded,
+            message: 'GitHub API limit reached. Using mock data.',
+            color: Color(0xFFF59E0B),
+          ),
+      ],
+    );
+  }
+
+  // ── Output Toggle ──────────────────────────────────────────────────────
+
+  Widget _buildOutputToggle(ColorScheme cs) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.onSurface.withAlpha(isDark ? 10 : 15)),
+        ),
+        child: Row(
+          children: [
+            _ToggleTab(
+              label: 'Edit Raw',
+              icon: Icons.code_rounded,
+              isActive: !_isPreview,
+              cs: cs,
+              onTap: () => setState(() => _isPreview = false),
+            ),
+            _ToggleTab(
+              label: 'Preview',
+              icon: Icons.visibility_rounded,
+              isActive: _isPreview,
+              cs: cs,
+              onTap: () => setState(() => _isPreview = true),
+            ),
+          ],
         ),
       ),
+    );
+  }
 
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+  // ── Output Area ────────────────────────────────────────────────────────
+
+  Widget _buildOutputArea(ColorScheme cs, bool hasOutput) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cs.onSurface.withAlpha(isDark ? 10 : 18)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: !hasOutput
+              ? Center(
+                  child: FadeTransition(
+                    opacity: _pulseController.drive(
+                      Tween(begin: 0.3, end: 0.7),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: cs.primary.withAlpha(8),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.description_outlined,
+                            size: 36,
+                            color: cs.onSurface.withAlpha(40),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Your generated README will appear here',
+                          style: TextStyle(
+                            color: cs.onSurface.withAlpha(60),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : _isPreview
+                  ? Markdown(
+                      data: _controller.generatedMarkdown,
+                      padding: const EdgeInsets.all(16),
+                      styleSheet: _buildMarkdownStyle(cs),
+                    )
+                  : TextField(
+                      controller: _controller.markdownController,
+                      maxLines: null,
+                      expands: true,
+                      onChanged: _controller.updateMarkdown,
+                      style: TextStyle(
+                        fontFamily: 'Cascadia Code, Fira Code, monospace',
+                        fontSize: 13,
+                        height: 1.7,
+                        color: cs.onSurface.withAlpha(200),
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(16),
+                      ),
+                    ),
+        ),
+      ),
+    );
+  }
+
+  // ── Bottom Action Bar ──────────────────────────────────────────────────
+
+  Widget _buildBottomBar(ColorScheme cs) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: cs.onSurface.withAlpha(8)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _BottomAction(
+              icon: Icons.content_copy_rounded,
+              label: 'Copy',
+              cs: cs,
+              onTap: () => _controller.copyToClipboard(_showSnack),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _BottomAction(
+              icon: Icons.call_merge_rounded,
+              label: 'Create PR',
+              cs: cs,
+              onTap: () => _controller.createPullRequest(_showSnack),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _BottomAction(
+              icon: Icons.download_rounded,
+              label: 'Export',
+              cs: cs,
+              onTap: () => _controller.downloadFile(_showSnack),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Markdown StyleSheet ───────────────────────────────────────────────
+
+  MarkdownStyleSheet _buildMarkdownStyle(ColorScheme cs) {
+    return MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+      p: TextStyle(
+        color: cs.onSurface.withAlpha(200),
+        fontSize: 14.5,
+        height: 1.6,
+        letterSpacing: 0.2,
+      ),
+      h1: TextStyle(
+        color: cs.onSurface,
+        fontSize: 24,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.5,
+      ),
+      h2: TextStyle(
+        color: cs.onSurface,
+        fontSize: 19,
+        fontWeight: FontWeight.w600,
+        letterSpacing: -0.3,
+      ),
+      h3: TextStyle(
+        color: cs.onSurface,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
+      code: TextStyle(
+        backgroundColor: cs.onSurface.withAlpha(12),
+        color: cs.primary,
+        fontSize: 13,
+        fontFamily: 'monospace',
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.surfaceContainerHighest),
+      ),
+      listBullet: TextStyle(
+        color: cs.onSurface.withAlpha(150),
+        fontSize: 14,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: Colors.transparent,
+        border: Border(
+          left: BorderSide(color: cs.onSurface.withAlpha(30), width: 3),
+        ),
+      ),
+      blockquote: TextStyle(
+        color: cs.onSurface.withAlpha(150),
+        fontStyle: FontStyle.italic,
+      ),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: cs.onSurface.withAlpha(12), width: 1),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mobile AppBar Button ─────────────────────────────────────────────────
+
+class _MobileAppBarButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? color;
+
+  const _MobileAppBarButton({
+    required this.icon,
+    required this.onTap,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Icon(
+          icon,
+          size: 20,
+          color: color ?? cs.onSurface.withAlpha(120),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Toggle Tab ───────────────────────────────────────────────────────────
+
+class _ToggleTab extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final ColorScheme cs;
+  final VoidCallback onTap;
+
+  const _ToggleTab({
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.cs,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: isActive ? cs.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(12),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ── URL Input ──
-              UrlInputField(
-                controller: _controller.urlController, 
-                onSubmitted: () {
-                  _controller.generate(() => _historyKey.currentState?.refresh());
-                  setState(() => _isPreview = true);
-                }
+              Icon(
+                icon,
+                size: 14,
+                color: isActive ? cs.primary : cs.onSurface.withAlpha(80),
               ),
-
-              const SizedBox(height: 18),
-
-              // ── Mode Selector ──
-              ModeSelector(
-                modes: _controller.modes,
-                selectedIndex: _controller.selectedModeIndex,
-                onModeSelected: _controller.setModeIndex,
-                isExpanded: true,
-                borderRadius: 14,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                fontSize: 13,
-              ),
-
-              const SizedBox(height: 18),
-
-              // ── Generate Button ──
-              GenerateButton(
-                isLoading: _controller.isLoading,
-                onPressed: () {
-                  _controller.generate(() => _historyKey.currentState?.refresh());
-                  setState(() => _isPreview = true);
-                },
-                height: 52,
-                fontSize: 15,
-                borderRadius: 14,
-                icon: const Icon(Icons.auto_awesome, size: 20),
-              ),
-
-              // ── Error Message ──
-              if (_controller.errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withAlpha(25),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.red.withAlpha(80)),
-                  ),
-                  child: Text(
-                    _controller.errorMessage!,
-                    style: const TextStyle(
-                      color: Colors.redAccent,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-              
-              // ── Mock Fallback Banner ──
-              if (_controller.isMock) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withAlpha(25),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.withAlpha(80)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, color: Colors.orangeAccent, size: 18),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'GitHub API limit reached. Using mock repository data as a fallback.',
-                          style: TextStyle(color: Colors.orangeAccent, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 18),
-
-              // ── Output Area ──
-              if (hasOutput)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => setState(() => _isPreview = false),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: !_isPreview
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHigh,
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Edit Raw',
-                          style: TextStyle(
-                            color: !_isPreview
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withAlpha(150),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () => setState(() => _isPreview = true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isPreview
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHigh,
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Preview',
-                          style: TextStyle(
-                            color: _isPreview
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withAlpha(150),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withAlpha(15),
-                    ),
-                  ),
-                  child: !hasOutput
-                      ? Center(
-                          child: FadeTransition(
-                            opacity: _pulseController.drive(
-                              Tween(begin: 0.3, end: 0.7),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.description_outlined,
-                                  size: 48,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withAlpha(60),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Your generated README will appear here',
-                                  style: TextStyle(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurface.withAlpha(80),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: _isPreview
-                              ? Markdown(
-                                  data: _controller.generatedMarkdown,
-                                  padding: const EdgeInsets.all(16),
-                                  styleSheet:
-                                      MarkdownStyleSheet.fromTheme(
-                                        Theme.of(context),
-                                      ).copyWith(
-                                        p: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withAlpha(200),
-                                          fontSize: 14.5,
-                                          height: 1.6,
-                                          letterSpacing: 0.2,
-                                        ),
-                                        h1: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: -0.5,
-                                        ),
-                                        h2: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                          fontSize: 19,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: -0.3,
-                                        ),
-                                        h3: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                        code: TextStyle(
-                                          backgroundColor: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface.withAlpha(12),
-                                          color: Theme.of(context).colorScheme.primary,
-                                          fontSize: 13,
-                                          fontFamily: 'monospace',
-                                        ),
-                                        codeblockDecoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest,
-                                          ),
-                                        ),
-                                        listBullet: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withAlpha(150),
-                                          fontSize: 14,
-                                        ),
-                                        blockquoteDecoration: BoxDecoration(
-                                          color: Colors.transparent,
-                                          border: Border(
-                                            left: BorderSide(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withAlpha(30),
-                                              width: 3,
-                                            ),
-                                          ),
-                                        ),
-                                        blockquote: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withAlpha(150),
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                        horizontalRuleDecoration: BoxDecoration(
-                                          border: Border(
-                                            top: BorderSide(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface
-                                                  .withAlpha(12),
-                                              width: 1,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                )
-                              : TextField(
-                                  controller: _controller.markdownController,
-                                  maxLines: null,
-                                  expands: true,
-                                  onChanged: _controller.updateMarkdown,
-                                  style: TextStyle(
-                                    fontFamily: 'Cascadia Code, Fira Code, monospace',
-                                    fontSize: 13,
-                                    height: 1.7,
-                                    color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.all(16),
-                                  ),
-                                ),
-                        ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                  color: isActive ? cs.onSurface : cs.onSurface.withAlpha(80),
                 ),
               ),
             ],
@@ -474,7 +576,105 @@ class _MobileScreenState extends State<MobileScreen>
         ),
       ),
     );
-    },
+  }
+}
+
+// ── Bottom Action Button ─────────────────────────────────────────────────
+
+class _BottomAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final ColorScheme cs;
+  final VoidCallback onTap;
+
+  const _BottomAction({
+    required this.icon,
+    required this.label,
+    required this.cs,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark
+              ? cs.surfaceContainerHigh
+              : cs.surfaceContainerHigh.withAlpha(100),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.onSurface.withAlpha(isDark ? 10 : 15)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: cs.primary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurface.withAlpha(160),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mobile Banner ────────────────────────────────────────────────────────
+
+class _MobileBanner extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  final Color color;
+  final VoidCallback? onDismiss;
+
+  const _MobileBanner({
+    required this.icon,
+    required this.message,
+    required this.color,
+    this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withAlpha(15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(30)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (onDismiss != null)
+            GestureDetector(
+              onTap: onDismiss,
+              child: Icon(Icons.close_rounded, size: 14, color: color.withAlpha(150)),
+            ),
+        ],
+      ),
     );
   }
 }
