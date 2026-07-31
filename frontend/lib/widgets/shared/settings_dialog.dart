@@ -330,7 +330,7 @@ class _SettingsDialogState extends State<SettingsDialog>
         // ── Section: Appearance ────────────────────────────
         _sectionLabel(cs, 'Appearance', Icons.palette_outlined),
         const SizedBox(height: 14),
-        _buildThemeToggle(cs, isDark),
+        _buildThemeToggle(cs),
 
         const SizedBox(height: 28),
         _divider(cs),
@@ -496,7 +496,9 @@ class _SettingsDialogState extends State<SettingsDialog>
     );
   }
 
-  Widget _buildThemeToggle(ColorScheme cs, bool isDark) {
+  Widget _buildThemeToggle(ColorScheme cs) {
+    final currentMode = ThemeProvider.themeModeNotifier.value;
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -510,22 +512,31 @@ class _SettingsDialogState extends State<SettingsDialog>
             cs,
             icon: Icons.light_mode_rounded,
             label: 'Light',
-            isSelected: !isDark,
-            onTap: () => ThemeProvider.setThemeMode(ThemeMode.light),
+            isSelected: currentMode == ThemeMode.light,
+            onTap: () async {
+              await ThemeProvider.setThemeMode(ThemeMode.light);
+              if (mounted) setState(() {});
+            },
           ),
           _themeOption(
             cs,
             icon: Icons.dark_mode_rounded,
             label: 'Dark',
-            isSelected: isDark,
-            onTap: () => ThemeProvider.setThemeMode(ThemeMode.dark),
+            isSelected: currentMode == ThemeMode.dark,
+            onTap: () async {
+              await ThemeProvider.setThemeMode(ThemeMode.dark);
+              if (mounted) setState(() {});
+            },
           ),
           _themeOption(
             cs,
             icon: Icons.auto_mode_rounded,
             label: 'System',
-            isSelected: false, // No way to detect "system" state directly
-            onTap: () => ThemeProvider.setThemeMode(ThemeMode.system),
+            isSelected: currentMode == ThemeMode.system,
+            onTap: () async {
+              await ThemeProvider.setThemeMode(ThemeMode.system);
+              if (mounted) setState(() {});
+            },
           ),
         ],
       ),

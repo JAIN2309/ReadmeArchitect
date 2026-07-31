@@ -8,24 +8,32 @@ class ThemeProvider {
 
   static Future<void> initialize() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool('isDarkMode') ?? true;
-    themeModeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+    final modeStr = prefs.getString('themeMode');
+    if (modeStr != null) {
+      themeModeNotifier.value = switch (modeStr) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        'system' => ThemeMode.system,
+        _ => ThemeMode.dark,
+      };
+    } else {
+      final isDark = prefs.getBool('isDarkMode') ?? true;
+      themeModeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+    }
   }
 
   static Future<void> toggleTheme() async {
-    final isDark = themeModeNotifier.value == ThemeMode.dark;
-    themeModeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isDarkMode', !isDark);
+    final currentMode = themeModeNotifier.value;
+    final newMode = currentMode == ThemeMode.dark
+        ? ThemeMode.light
+        : ThemeMode.dark;
+    await setThemeMode(newMode);
   }
 
   static Future<void> setThemeMode(ThemeMode mode) async {
     themeModeNotifier.value = mode;
     final prefs = await SharedPreferences.getInstance();
-    if (mode == ThemeMode.system) {
-      await prefs.remove('isDarkMode');
-    } else {
-      await prefs.setBool('isDarkMode', mode == ThemeMode.dark);
-    }
+    await prefs.setString('themeMode', mode.name);
+    await prefs.setBool('isDarkMode', mode == ThemeMode.dark);
   }
 }
