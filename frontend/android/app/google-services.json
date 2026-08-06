@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "991575419889",
+    "project_id": "readmearchitect",
+    "storage_bucket": "readmearchitect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:991575419889:android:b2a4698961358fdaee3250",
+        "android_client_info": {
+          "package_name": "com.readme.architect.automated_readme_architect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "991575419889-6d8171n8h42tqvtd7g6inf9pmtocqlug.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDLUxFz5dqxYYp9q1K2LzJqxfNfC1cnp80"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "991575419889-6d8171n8h42tqvtd7g6inf9pmtocqlug.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
