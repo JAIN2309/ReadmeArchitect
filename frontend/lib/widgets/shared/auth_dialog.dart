@@ -1,7 +1,7 @@
-/// Responsive Authentication Modal for README Architect.
+/// Premium Responsive Authentication Modal for README Architect.
 ///
-/// Prompts users to log in before generating READMEs or accessing Cloud Sync.
-/// Matches the Slate/Zinc design system.
+/// Features a glassmorphism card with gradient accent strip, animated
+/// transitions, real Google "G" logo SVG, and polished micro-interactions.
 library;
 
 import 'package:flutter/material.dart';
@@ -27,7 +27,7 @@ class AuthDialog extends StatefulWidget {
     } else {
       return await showDialog<bool>(
             context: context,
-            barrierColor: Colors.black54,
+            barrierColor: Colors.black.withAlpha(170),
             builder: (context) => AuthDialog(onAuthSuccess: onAuthSuccess),
           ) ??
           false;
@@ -42,29 +42,36 @@ class _AuthDialogState extends State<AuthDialog>
     with SingleTickerProviderStateMixin {
   bool _isSignUp = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String? _error;
+  String? _activeButton; // Track which button is loading
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  late AnimationController _fadeController;
+  late AnimationController _animController;
   late Animation<double> _fadeIn;
+  late Animation<Offset> _slideUp;
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
+    _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
     );
-    _fadeIn = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
-    _fadeController.forward();
+    _fadeIn = CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic);
+    _slideUp = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _animController.forward();
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _fadeController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -79,6 +86,7 @@ class _AuthDialogState extends State<AuthDialog>
 
     setState(() {
       _isLoading = true;
+      _activeButton = 'email';
       _error = null;
     });
 
@@ -94,8 +102,9 @@ class _AuthDialogState extends State<AuthDialog>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _error = e.toString().replaceAll('Exception: ', '').replaceAll('[firebase_auth/', '').replaceAll(']', '');
           _isLoading = false;
+          _activeButton = null;
         });
       }
     }
@@ -104,6 +113,7 @@ class _AuthDialogState extends State<AuthDialog>
   Future<void> _handleGoogleLogin() async {
     setState(() {
       _isLoading = true;
+      _activeButton = 'google';
       _error = null;
     });
     try {
@@ -116,6 +126,7 @@ class _AuthDialogState extends State<AuthDialog>
         setState(() {
           _error = e.toString().replaceAll('Exception: ', '');
           _isLoading = false;
+          _activeButton = null;
         });
       }
     }
@@ -124,6 +135,7 @@ class _AuthDialogState extends State<AuthDialog>
   Future<void> _handleGuestLogin() async {
     setState(() {
       _isLoading = true;
+      _activeButton = 'guest';
       _error = null;
     });
     try {
@@ -136,6 +148,7 @@ class _AuthDialogState extends State<AuthDialog>
         setState(() {
           _error = 'Could not start guest session: $e';
           _isLoading = false;
+          _activeButton = null;
         });
       }
     }
@@ -152,44 +165,101 @@ class _AuthDialogState extends State<AuthDialog>
     if (isMobile) {
       return FadeTransition(
         opacity: _fadeIn,
-        child: Container(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(24)),
+        child: SlideTransition(
+          position: _slideUp,
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(50),
+                  blurRadius: 30,
+                  offset: const Offset(0, -8),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.fromLTRB(
+              24,
+              8,
+              24,
+              MediaQuery.of(context).viewInsets.bottom + 28,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Drag Handle ──
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: cs.onSurface.withAlpha(30),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  content,
+                ],
+              ),
+            ),
           ),
-          padding: EdgeInsets.fromLTRB(
-            24,
-            20,
-            24,
-            MediaQuery.of(context).viewInsets.bottom + 28,
-          ),
-          child: SingleChildScrollView(child: content),
         ),
       );
     }
 
     return FadeTransition(
       opacity: _fadeIn,
-      child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: 440,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: cs.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.onSurface.withAlpha(15)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(40),
-                  blurRadius: 40,
-                  offset: const Offset(0, 16),
+      child: SlideTransition(
+        position: _slideUp,
+        child: Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 460,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: cs.onSurface.withAlpha(10),
                 ),
-              ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(60),
+                    blurRadius: 60,
+                    offset: const Offset(0, 20),
+                  ),
+                  BoxShadow(
+                    color: cs.primary.withAlpha(8),
+                    blurRadius: 80,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Top Gradient Accent Strip ──
+                  Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          cs.primary,
+                          cs.primary.withAlpha(180),
+                          const Color(0xFF8B5CF6),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
+                    child: SingleChildScrollView(child: content),
+                  ),
+                ],
+              ),
             ),
-            child: SingleChildScrollView(child: content),
           ),
         ),
       ),
@@ -206,13 +276,22 @@ class _AuthDialogState extends State<AuthDialog>
         // ── Header ──────────────────────────────────────────
         Row(
           children: [
+            // Animated gradient icon container
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: cs.primary.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    cs.primary.withAlpha(25),
+                    const Color(0xFF8B5CF6).withAlpha(15),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cs.primary.withAlpha(20)),
               ),
-              child: Icon(Icons.lock_rounded, color: cs.primary, size: 24),
+              child: Icon(Icons.shield_rounded, color: cs.primary, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -220,279 +299,495 @@ class _AuthDialogState extends State<AuthDialog>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _isSignUp ? 'Create Account' : 'Sign In Required',
+                    _isSignUp ? 'Create Your Account' : 'Welcome Back',
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 21,
                       fontWeight: FontWeight.w700,
                       color: cs.onSurface,
-                      letterSpacing: -0.4,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
-                    'Sign in to generate & sync READMEs across devices',
+                    _isSignUp
+                        ? 'Join to generate & sync READMEs across devices'
+                        : 'Sign in to continue generating READMEs',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurface.withAlpha(120),
+                      fontSize: 12.5,
+                      color: cs.onSurface.withAlpha(100),
+                      height: 1.3,
                     ),
                   ),
                 ],
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.close_rounded,
-                  color: cs.onSurface.withAlpha(100), size: 20),
-              onPressed: () => Navigator.pop(context, false),
-            ),
+            _buildCloseButton(cs),
           ],
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
+
+        // ── 1-Click Google Sign-In (FIRST — most prominent) ──
+        _buildGoogleButton(cs, isDark),
+
+        const SizedBox(height: 20),
+
+        // ── Divider ──
+        _buildDivider(cs),
+
+        const SizedBox(height: 20),
 
         // ── Error Banner ───────────────────────────────────
         if (_error != null) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
+          _buildErrorBanner(cs),
+          const SizedBox(height: 16),
+        ],
+
+        // ── Email Input ─────────────────────────────────────
+        _buildInputLabel('Email Address', cs),
+        const SizedBox(height: 6),
+        _buildEmailField(cs, isDark),
+
+        const SizedBox(height: 14),
+
+        // ── Password Input ──────────────────────────────────
+        _buildInputLabel('Password', cs),
+        const SizedBox(height: 6),
+        _buildPasswordField(cs, isDark),
+
+        const SizedBox(height: 22),
+
+        // ── Submit Button ────────────────────────────────────
+        _buildSubmitButton(cs),
+
+        const SizedBox(height: 14),
+
+        // ── Toggle Sign Up / Sign In ───────────────────────
+        _buildToggleLink(cs),
+
+        const SizedBox(height: 20),
+
+        // ── Guest Session ───────────────────────────────────
+        _buildGuestButton(cs, isDark),
+
+        const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ── Individual Widget Builders ──
+  // ═══════════════════════════════════════════════════════════════════
+
+  Widget _buildCloseButton(ColorScheme cs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.onSurface.withAlpha(8),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: IconButton(
+        icon: Icon(Icons.close_rounded,
+            color: cs.onSurface.withAlpha(80), size: 18),
+        onPressed: () => Navigator.pop(context, false),
+        splashRadius: 18,
+        padding: const EdgeInsets.all(6),
+        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton(ColorScheme cs, bool isDark) {
+    final isActive = _activeButton == 'google' && _isLoading;
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleGoogleLogin,
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 13),
             decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withAlpha(15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFEF4444).withAlpha(40)),
+              color: isDark ? const Color(0xFF1A1A2E) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark
+                    ? cs.onSurface.withAlpha(18)
+                    : const Color(0xFFDADCE0),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 20 : 8),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline_rounded,
-                    color: Color(0xFFEF4444), size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(
-                      color: Color(0xFFEF4444),
-                      fontSize: 12,
+                if (isActive) ...[
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: cs.primary,
                     ),
+                  ),
+                ] else ...[
+                  // Real Google "G" logo using colored containers
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CustomPaint(painter: _GoogleLogoPainter()),
+                  ),
+                ],
+                const SizedBox(width: 12),
+                Text(
+                  'Continue with Google',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : const Color(0xFF3C4043),
+                    letterSpacing: 0.1,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-        ],
-
-        // ── Email Input ─────────────────────────────────────
-        Text(
-          'Email Address',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface.withAlpha(180),
-          ),
         ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? cs.surfaceContainerHigh
-                : cs.surfaceContainerHigh.withAlpha(120),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cs.onSurface.withAlpha(isDark ? 12 : 20)),
-          ),
-          child: TextField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            style: TextStyle(color: cs.onSurface, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'developer@example.com',
-              hintStyle: TextStyle(
-                color: cs.onSurface.withAlpha(50),
-                fontSize: 14,
-              ),
-              prefixIcon: Icon(Icons.email_outlined,
-                  size: 18, color: cs.onSurface.withAlpha(80)),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            ),
-          ),
-        ),
+      ),
+    );
+  }
 
-        const SizedBox(height: 16),
-
-        // ── Password Input ──────────────────────────────────
-        Text(
-          'Password',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface.withAlpha(180),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? cs.surfaceContainerHigh
-                : cs.surfaceContainerHigh.withAlpha(120),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cs.onSurface.withAlpha(isDark ? 12 : 20)),
-          ),
-          child: TextField(
-            controller: _passwordController,
-            obscureText: true,
-            style: TextStyle(color: cs.onSurface, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: '••••••••',
-              hintStyle: TextStyle(
-                color: cs.onSurface.withAlpha(50),
-                fontSize: 14,
-              ),
-              prefixIcon: Icon(Icons.lock_outline_rounded,
-                  size: 18, color: cs.onSurface.withAlpha(80)),
-              border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // ── Submit Button ────────────────────────────────────
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _handleSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: cs.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              elevation: 0,
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    _isSignUp ? 'Create Account' : 'Sign In & Continue',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // ── Toggle Sign Up / Sign In ───────────────────────
-        Center(
-          child: GestureDetector(
-            onTap: () => setState(() => _isSignUp = !_isSignUp),
-            child: Text(
-              _isSignUp
-                  ? 'Already have an account? Sign In'
-                  : 'New developer? Create an account',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: cs.primary,
+  Widget _buildDivider(ColorScheme cs) {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  cs.onSurface.withAlpha(18),
+                ],
               ),
             ),
           ),
         ),
-
-        const SizedBox(height: 20),
-
-        // ── Divider ─────────────────────────────────────────
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 1,
-                color: cs.onSurface.withAlpha(15),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                'OR',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface.withAlpha(60),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                height: 1,
-                color: cs.onSurface.withAlpha(15),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 20),
-
-        // ── 1-Click Google Sign In ───────────────────────
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _isLoading ? null : _handleGoogleLogin,
-            icon: Icon(Icons.g_mobiledata_rounded,
-                size: 22, color: cs.primary),
-            label: Text(
-              'Sign In with Google',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: cs.primary.withAlpha(50)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'or continue with email',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: cs.onSurface.withAlpha(50),
+              letterSpacing: 0.3,
             ),
           ),
         ),
-
-        const SizedBox(height: 10),
-
-        // ── Guest Session Option ───────────────────────────
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: _isLoading ? null : _handleGuestLogin,
-            icon: Icon(Icons.person_outline_rounded,
-                size: 18, color: cs.onSurface.withAlpha(160)),
-            label: Text(
-              'Continue as Guest',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: cs.onSurface.withAlpha(180),
+        Expanded(
+          child: Container(
+            height: 1,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  cs.onSurface.withAlpha(18),
+                  Colors.transparent,
+                ],
               ),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: cs.onSurface.withAlpha(25)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 13),
             ),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildErrorBanner(ColorScheme cs) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEF4444).withAlpha(10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEF4444).withAlpha(30)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEF4444).withAlpha(15),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(Icons.error_outline_rounded,
+                color: Color(0xFFEF4444), size: 14),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _error!,
+              style: const TextStyle(
+                color: Color(0xFFEF4444),
+                fontSize: 12,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputLabel(String text, ColorScheme cs) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: cs.onSurface.withAlpha(150),
+        letterSpacing: 0.2,
+      ),
+    );
+  }
+
+  Widget _buildEmailField(ColorScheme cs, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? cs.surfaceContainerHigh.withAlpha(80)
+            : cs.surfaceContainerHigh.withAlpha(100),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.onSurface.withAlpha(isDark ? 10 : 15)),
+      ),
+      child: TextField(
+        controller: _emailController,
+        keyboardType: TextInputType.emailAddress,
+        style: TextStyle(color: cs.onSurface, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'developer@example.com',
+          hintStyle: TextStyle(
+            color: cs.onSurface.withAlpha(40),
+            fontSize: 13.5,
+          ),
+          prefixIcon: Icon(Icons.email_outlined,
+              size: 17, color: cs.onSurface.withAlpha(60)),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField(ColorScheme cs, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? cs.surfaceContainerHigh.withAlpha(80)
+            : cs.surfaceContainerHigh.withAlpha(100),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.onSurface.withAlpha(isDark ? 10 : 15)),
+      ),
+      child: TextField(
+        controller: _passwordController,
+        obscureText: _obscurePassword,
+        style: TextStyle(color: cs.onSurface, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: '••••••••',
+          hintStyle: TextStyle(
+            color: cs.onSurface.withAlpha(40),
+            fontSize: 13.5,
+          ),
+          prefixIcon: Icon(Icons.lock_outline_rounded,
+              size: 17, color: cs.onSurface.withAlpha(60)),
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
+              size: 17,
+              color: cs.onSurface.withAlpha(50),
+            ),
+            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(ColorScheme cs) {
+    final isActive = _activeButton == 'email' && _isLoading;
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleSubmit,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: cs.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: cs.primary.withAlpha(120),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          elevation: 0,
+        ),
+        child: isActive
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _isSignUp ? Icons.person_add_alt_1_rounded : Icons.login_rounded,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isSignUp ? 'Create Account' : 'Sign In & Continue',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildToggleLink(ColorScheme cs) {
+    return Center(
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => setState(() {
+            _isSignUp = !_isSignUp;
+            _error = null;
+          }),
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(100)),
+              children: [
+                TextSpan(
+                  text: _isSignUp ? 'Already have an account? ' : 'New developer? ',
+                ),
+                TextSpan(
+                  text: _isSignUp ? 'Sign In' : 'Create an account',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestButton(ColorScheme cs, bool isDark) {
+    final isActive = _activeButton == 'guest' && _isLoading;
+    return Center(
+      child: TextButton.icon(
+        onPressed: _isLoading ? null : _handleGuestLogin,
+        icon: isActive
+            ? SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: cs.onSurface.withAlpha(80),
+                ),
+              )
+            : Icon(Icons.explore_outlined,
+                size: 16, color: cs.onSurface.withAlpha(80)),
+        label: Text(
+          'Try as Guest',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            color: cs.onSurface.withAlpha(80),
+          ),
+        ),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ── Google "G" Logo Painter (4-color arc logo) ──
+// ═══════════════════════════════════════════════════════════════════
+
+class _GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final center = Offset(w / 2, h / 2);
+    final radius = w / 2;
+
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    // Blue (right quadrant)
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -0.4, 1.2, true, paint,
+    );
+
+    // Green (bottom)
+    paint.color = const Color(0xFF34A853);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      0.8, 1.2, true, paint,
+    );
+
+    // Yellow (left-bottom)
+    paint.color = const Color(0xFFFBBC05);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      2.0, 1.0, true, paint,
+    );
+
+    // Red (top-left)
+    paint.color = const Color(0xFFEA4335);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      3.0, 1.8, true, paint,
+    );
+
+    // Inner white circle (donut cutout)
+    paint.color = Colors.white;
+    canvas.drawCircle(center, radius * 0.55, paint);
+
+    // Blue bar on the right
+    paint.color = const Color(0xFF4285F4);
+    canvas.drawRect(
+      Rect.fromLTWH(w * 0.48, h * 0.38, w * 0.52, h * 0.24),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

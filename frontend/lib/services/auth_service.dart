@@ -68,25 +68,41 @@ class AuthService {
     return null;
   }
 
-  /// Sign in with 1-Click Google Provider
+  /// Sign in with Google — uses Firebase signInWithPopup on Web for proper
+  /// OAuth flow without needing a client ID meta tag.
   static Future<AppUser> signInWithGoogle() async {
     if (_isFirebaseInitialized) {
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        throw Exception('Google Sign-In canceled by user.');
+      if (kIsWeb) {
+        // On Flutter Web, use signInWithPopup for the most reliable Google flow.
+        // This uses the Firebase project's own OAuth config — no extra meta tags needed.
+        final googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+
+        final userCred = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+        final user = AppUser.fromFirebase(userCred.user!);
+        userNotifier.value = user;
+        return user;
+      } else {
+        // Native Android/iOS — use google_sign_in plugin
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          throw Exception('Google Sign-In canceled by user.');
+        }
+        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
+        final user = AppUser.fromFirebase(userCred.user!);
+        userNotifier.value = user;
+        return user;
       }
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
-      final user = AppUser.fromFirebase(userCred.user!);
-      userNotifier.value = user;
-      return user;
     }
 
+    // Demo fallback when Firebase isn't initialized
     final user = const AppUser(
       uid: 'google_user_demo',
       email: 'developer@gmail.com',
