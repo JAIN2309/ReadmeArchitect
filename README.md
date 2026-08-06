@@ -62,7 +62,8 @@ A **production-grade AI documentation engine** connecting developers with automa
 <td width="33%" valign="top">
 
 ### 💻 Desktop/Web Frontend
-- **1-Click Google & Social Auth** — Sign In with Google, Email/Password, or Guest Session inside responsive `AuthDialog`
+- **1-Click Google & Social Auth** — Sign In with Google popup flow (`signInWithPopup`), Email/Password, or Guest Session inside redesigned glassmorphism `AuthDialog`
+- **FlutterFire Integration** — `Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)` initializing app state on launch
 - **Gated README Generation** — prompts sign-in modal if user is unauthenticated
 - **Vertical Icon Sidebar** — quick access to History, Badges, Copy, PR creation, and File Export
 - **Line-Numbered Source Editor** — full line-numbered gutter with raw Markdown editing
@@ -153,8 +154,9 @@ While the core experience is highly polished, the following features are planned
 | Technology | Purpose |
 |-----------|---------|
 | **Flutter 3.x** | Cross-platform UI toolkit (Web, Desktop, Mobile) |
+| **firebase_core** | Firebase core SDK initialized with `DefaultFirebaseOptions.currentPlatform` |
 | **cloud_firestore** | Realtime document storage SDK for fetching & saving user history |
-| **firebase_auth** | User authentication engine (1-Click Google, Email/Password, Guest mode) |
+| **firebase_auth** | User authentication engine (1-Click Google popup, Email/Password, Guest mode) |
 | **google_sign_in** | Native 1-Click Google Sign-In SDK integration |
 | **flutter_markdown** | Live rendering of AI-generated markdown strings with custom styled sheets |
 | **flutter_secure_storage** | Native Keystore/Keychain encryption for storing GitHub Personal Access Tokens (PAT) securely |
@@ -192,7 +194,8 @@ readme_architect/
     ├── assets/
     │   └── app_icon.png          # Master 1024x1024 app icon asset
     ├── lib/
-    │   ├── main.dart                    # App entry point, MaterialApp theme config
+    │   ├── main.dart                    # App entry point, Firebase.initializeApp config
+    │   ├── firebase_options.dart        # Auto-generated FlutterFire platform configuration
     │   ├── models/
     │   │   └── history_entry.dart        # History data model with flexible ID types
     │   ├── screens/
@@ -265,6 +268,11 @@ Open a new terminal window and navigate to the frontend directory:
 ```bash
 cd frontend
 flutter pub get
+```
+
+Configure Firebase options using FlutterFire CLI:
+```bash
+flutterfire configure
 ```
 
 Run the application on Desktop Web (Chrome):
