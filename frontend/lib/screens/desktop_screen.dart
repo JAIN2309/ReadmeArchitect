@@ -14,6 +14,7 @@ import '../widgets/shared/mode_selector.dart';
 import '../widgets/shared/generate_button.dart';
 import '../widgets/shared/settings_dialog.dart';
 import '../widgets/shared/auth_dialog.dart';
+import '../widgets/shared/profile_dialog.dart';
 import '../services/auth_service.dart';
 import '../controllers/readme_controller.dart';
 
@@ -223,8 +224,11 @@ class _DesktopScreenState extends State<DesktopScreen>
               if (user == null) {
                 AuthDialog.show(context);
               } else {
-                AuthService.signOut();
-                _showSnack('Signed out');
+                ProfileDialog.show(
+                  context,
+                  user: user,
+                  onSignedOut: () => _showSnack('Signed out successfully'),
+                );
               }
             },
           ),

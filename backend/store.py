@@ -85,7 +85,7 @@ def get_history(session_id: str) -> list[HistoryEntry]:
     if _firestore_db:
         try:
             user_history_ref = _firestore_db.collection("users").document(session_id).collection("history")
-            docs = user_history_ref.order_by("created_at", direction="DESCENDING").stream()
+            docs = list(user_history_ref.stream())
             entries = []
             for doc in docs:
                 data = doc.to_dict()
@@ -98,6 +98,8 @@ def get_history(session_id: str) -> list[HistoryEntry]:
                     markdown=data.get("markdown", ""),
                     created_at=data.get("created_at", ""),
                 ))
+            # Sort by creation date descending in memory to avoid Firestore index errors
+            entries.sort(key=lambda x: x.created_at, reverse=True)
             return entries
         except Exception as e:
             logger.error(f"Firestore get_history error: {e}. Falling back to SQLite.")
@@ -134,6 +136,7 @@ def add_history_entry(session_id: str, entry: HistoryEntry) -> HistoryEntry:
             }
             _, doc_ref = user_history_ref.add(data)
             entry.id = doc_ref.id
+            logger.info(f"Successfully added history entry {doc_ref.id} to Firestore for user {session_id}.")
             return entry
         except Exception as e:
             logger.error(f"Firestore add_history_entry error: {e}. Falling back to SQLite.")
