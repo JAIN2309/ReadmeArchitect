@@ -24,19 +24,22 @@
       background-color: #09090B;
       margin: 0;
       padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      width: 100vw;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      overflow: hidden;
     }
-    .loading-container {
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       display: flex;
       flex-direction: column;
+      justify-content: center;
       align-items: center;
+      background-color: #09090B;
+      z-index: 99999;
       gap: 16px;
+      transition: opacity 0.3s ease;
     }
     .spinner {
       width: 40px;
@@ -58,10 +61,38 @@
   </style>
 </head>
 <body>
-  <div class="loading-container">
+  <div id="loading">
     <div class="spinner"></div>
     <div class="loading-text">Loading ReadmeArchitect...</div>
   </div>
+
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    // MutationObserver to automatically remove #loading element once Flutter Web mounts
+    (function() {
+      var observer = new MutationObserver(function(mutations) {
+        var loader = document.getElementById('loading');
+        var flutterView = document.querySelector('flutter-view') || document.querySelector('flt-glass-pane');
+        if (flutterView && loader) {
+          loader.style.opacity = '0';
+          setTimeout(function() {
+            if (loader && loader.parentNode) {
+              loader.parentNode.removeChild(loader);
+            }
+          }, 300);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      // Fallback timeout: remove loader after 6 seconds max
+      setTimeout(function() {
+        var loader = document.getElementById('loading');
+        if (loader && loader.parentNode) {
+          loader.parentNode.removeChild(loader);
+        }
+      }, 6000);
+    })();
+  </script>
 </body>
 </html>
