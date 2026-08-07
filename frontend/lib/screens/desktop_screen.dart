@@ -217,8 +217,8 @@ class _DesktopScreenState extends State<DesktopScreen>
 
           // Auth / User Profile Button
           _ToolbarButton(
-            icon: user != null ? Icons.account_circle_rounded : Icons.lock_outline_rounded,
-            tooltip: user != null ? 'Signed in as ${user.displayName}' : 'Sign In',
+            icon: user != null ? Icons.account_circle_rounded : Icons.person_outline_rounded,
+            tooltip: user != null ? 'Signed in as ${user.displayName}' : 'Sign In / Account',
             onPressed: () {
               if (user == null) {
                 AuthDialog.show(context);

@@ -220,7 +220,7 @@ class _MobileScreenState extends State<MobileScreen>
         ),
         // Auth / User Profile Button
         _MobileAppBarButton(
-          icon: user != null ? Icons.account_circle_rounded : Icons.lock_outline_rounded,
+          icon: user != null ? Icons.account_circle_rounded : Icons.person_outline_rounded,
           color: user != null ? cs.primary : null,
           onTap: () {
             if (user == null) {
