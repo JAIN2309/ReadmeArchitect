@@ -18,16 +18,23 @@ import 'services/auth_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with auto-generated platform options
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Initialize Firebase with fallback protection to prevent web white-screen crashes
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    await AuthService.initialize();
+  } catch (e) {
+    debugPrint('Firebase initialization warning: $e');
+  }
 
-  // Initialize Auth listener (must come after Firebase.initializeApp)
-  await AuthService.initialize();
+  try {
+    await ThemeProvider.initialize();
+    await ApiService.initSession();
+  } catch (e) {
+    debugPrint('App initialization warning: $e');
+  }
 
-  await ThemeProvider.initialize();
-  await ApiService.initSession();
   runApp(const ReadmeArchitectApp());
 }
 
