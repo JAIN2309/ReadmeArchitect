@@ -37,13 +37,12 @@ class AuthService {
 
   static final ValueNotifier<AppUser?> userNotifier = ValueNotifier<AppUser?>(null);
 
-  static bool _isFirebaseInitialized = false;
+  static bool get _hasFirebase => Firebase.apps.isNotEmpty;
 
   /// Initialize Firebase Auth listener.
   static Future<void> initialize() async {
     try {
-      if (Firebase.apps.isNotEmpty) {
-        _isFirebaseInitialized = true;
+      if (_hasFirebase) {
         FirebaseAuth.instance.authStateChanges().listen((User? user) {
           if (user != null) {
             userNotifier.value = AppUser.fromFirebase(user);
@@ -51,6 +50,11 @@ class AuthService {
             userNotifier.value = null;
           }
         });
+        // Set initial user if already signed in
+        final current = FirebaseAuth.instance.currentUser;
+        if (current != null) {
+          userNotifier.value = AppUser.fromFirebase(current);
+        }
       }
     } catch (e) {
       if (kDebugMode) print('Firebase Auth initialization skipped: $e');
@@ -62,29 +66,28 @@ class AuthService {
 
   /// Fetch Firebase ID token for secure API requests
   static Future<String?> getIdToken() async {
-    if (_isFirebaseInitialized && FirebaseAuth.instance.currentUser != null) {
+    if (_hasFirebase && FirebaseAuth.instance.currentUser != null) {
       return await FirebaseAuth.instance.currentUser!.getIdToken();
     }
     return null;
   }
 
-  /// Sign in with Google — uses Firebase signInWithPopup on Web for proper
-  /// OAuth flow without needing a client ID meta tag.
+  /// Sign in with Google — uses Firebase signInWithPopup on Web with account selector,
+  /// and google_sign_in plugin on mobile.
   static Future<AppUser> signInWithGoogle() async {
-    if (_isFirebaseInitialized) {
+    if (_hasFirebase) {
       if (kIsWeb) {
-        // On Flutter Web, use signInWithPopup for the most reliable Google flow.
-        // This uses the Firebase project's own OAuth config — no extra meta tags needed.
         final googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
+        // Force Google to show the account picker popup every time
+        googleProvider.setCustomParameters({'prompt': 'select_account'});
 
         final userCred = await FirebaseAuth.instance.signInWithPopup(googleProvider);
         final user = AppUser.fromFirebase(userCred.user!);
         userNotifier.value = user;
         return user;
       } else {
-        // Native Android/iOS — use google_sign_in plugin
         final GoogleSignIn googleSignIn = GoogleSignIn();
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         if (googleUser == null) {
@@ -102,19 +105,12 @@ class AuthService {
       }
     }
 
-    // Demo fallback when Firebase isn't initialized
-    final user = const AppUser(
-      uid: 'google_user_demo',
-      email: 'developer@gmail.com',
-      displayName: 'Google Developer',
-    );
-    userNotifier.value = user;
-    return user;
+    throw Exception('Firebase is not initialized. Please configure Firebase options.');
   }
 
   /// Sign in with Email and Password
   static Future<AppUser> signInWithEmail(String email, String password) async {
-    if (_isFirebaseInitialized) {
+    if (_hasFirebase) {
       final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -135,7 +131,7 @@ class AuthService {
 
   /// Register new user with Email and Password
   static Future<AppUser> signUpWithEmail(String email, String password) async {
-    if (_isFirebaseInitialized) {
+    if (_hasFirebase) {
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -156,7 +152,7 @@ class AuthService {
 
   /// Guest Sign-In (Anonymous Session)
   static Future<AppUser> signInAsGuest() async {
-    if (_isFirebaseInitialized) {
+    if (_hasFirebase) {
       final cred = await FirebaseAuth.instance.signInAnonymously();
       final user = AppUser.fromFirebase(cred.user!);
       userNotifier.value = user;
@@ -174,7 +170,7 @@ class AuthService {
 
   /// Sign Out
   static Future<void> signOut() async {
-    if (_isFirebaseInitialized) {
+    if (_hasFirebase) {
       await FirebaseAuth.instance.signOut();
     }
     userNotifier.value = null;
