@@ -117,10 +117,6 @@ class _AuthDialogState extends State<AuthDialog>
       _error = null;
     });
     try {
-      // If Firebase wasn't ready at startup, attempt to initialize now
-      if (!AuthService.isFirebaseReady) {
-        await AuthService.retryInitialize();
-      }
       await AuthService.signInWithGoogle();
       if (!mounted) return;
       widget.onAuthSuccess?.call();
