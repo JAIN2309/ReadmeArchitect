@@ -219,76 +219,82 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildDesktopLayout() {
     final cs = Theme.of(context).colorScheme;
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final cardWidth = (screenWidth > 1000 ? 560.0 : 480.0).clamp(400.0, 600.0);
+    // Use 80% of screen height for card, clamped between 440 and 680
+    final cardMaxHeight = (screenHeight * 0.82).clamp(440.0, 680.0);
 
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // ── Main Card ──
-          Container(
-            width: cardWidth,
-            constraints: const BoxConstraints(maxHeight: 560),
-            decoration: BoxDecoration(
-              color: cs.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.onSurface.withAlpha(15)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(40),
-                  blurRadius: 40,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+      child: Container(
+        width: cardWidth,
+        constraints: BoxConstraints(maxHeight: cardMaxHeight),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: cs.onSurface.withAlpha(15)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(40),
+              blurRadius: 40,
+              offset: const Offset(0, 16),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Header bar ──
-                _buildCardHeader(cs, cardWidth),
-                Divider(height: 1, color: cs.onSurface.withAlpha(12)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Header bar ──
+            _buildCardHeader(cs),
+            Divider(height: 1, color: cs.onSurface.withAlpha(12)),
 
-                // ── Step Content (PageView) ──
-                Flexible(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (idx) {
-                      setState(() => _currentPage = idx);
-                      _contentAnim.reset();
-                      _contentAnim.forward();
-                    },
-                    itemCount: _onboardingSteps.length,
-                    itemBuilder: (context, index) {
-                      return SlideTransition(
-                        position: _contentSlide,
-                        child: FadeTransition(
-                          opacity: _contentFade,
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(32, 28, 32, 24),
+            // ── Step Content (PageView) ──
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (idx) {
+                  setState(() => _currentPage = idx);
+                  _contentAnim.reset();
+                  _contentAnim.forward();
+                },
+                itemCount: _onboardingSteps.length,
+                itemBuilder: (context, index) {
+                  return SlideTransition(
+                    position: _contentSlide,
+                    child: FadeTransition(
+                      opacity: _contentFade,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            padding:
+                                const EdgeInsets.fromLTRB(32, 24, 32, 20),
                             child: _buildStepContent(
-                                _onboardingSteps[index], cs, false),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                Divider(height: 1, color: cs.onSurface.withAlpha(12)),
-
-                // ── Footer ──
-                _buildCardFooter(cs),
-              ],
+                              _onboardingSteps[index],
+                              cs,
+                              false,
+                              constraints.maxHeight,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+
+            Divider(height: 1, color: cs.onSurface.withAlpha(12)),
+
+            // ── Footer ──
+            _buildCardFooter(cs),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCardHeader(ColorScheme cs, double cardWidth) {
+  Widget _buildCardHeader(ColorScheme cs) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 20, 20, 16),
+      padding: const EdgeInsets.fromLTRB(28, 18, 20, 14),
       child: Row(
         children: [
           // Logo + Title
@@ -349,7 +355,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final isLast = _currentPage == _onboardingSteps.length - 1;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 16, 28, 20),
+      padding: const EdgeInsets.fromLTRB(28, 14, 28, 18),
       child: Row(
         children: [
           // ── Step dots ──
@@ -492,10 +498,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 position: _contentSlide,
                 child: FadeTransition(
                   opacity: _contentFade,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                    child: _buildStepContent(
-                        _onboardingSteps[index], cs, true),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                        child: _buildStepContent(
+                          _onboardingSteps[index],
+                          cs,
+                          true,
+                          constraints.maxHeight,
+                        ),
+                      );
+                    },
                   ),
                 ),
               );
@@ -628,17 +642,31 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Shared Step Content ──────────────────────────────────────────────
 
   Widget _buildStepContent(
-      _OnboardingStep step, ColorScheme cs, bool isMobile) {
+      _OnboardingStep step, ColorScheme cs, bool isMobile, double availableHeight) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Scale icon and spacing based on available height
+    final isCompact = availableHeight < 380;
+    final iconSize = isCompact
+        ? (isMobile ? 56.0 : 52.0)
+        : (isMobile ? 80.0 : 72.0);
+    final iconInnerSize = isCompact
+        ? (isMobile ? 26.0 : 24.0)
+        : (isMobile ? 36.0 : 32.0);
+    final verticalGap = isCompact ? 12.0 : 24.0;
+    final titleSize = isCompact
+        ? (isMobile ? 18.0 : 17.0)
+        : (isMobile ? 22.0 : 20.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         // ── Icon badge ──
         Center(
           child: Container(
-            width: isMobile ? 80 : 72,
-            height: isMobile ? 80 : 72,
+            width: iconSize,
+            height: iconSize,
             decoration: BoxDecoration(
               color: cs.primary.withAlpha(15),
               shape: BoxShape.circle,
@@ -646,13 +674,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ),
             child: Icon(
               step.icon,
-              size: isMobile ? 36 : 32,
+              size: iconInnerSize,
               color: cs.primary,
             ),
           ),
         ),
 
-        const SizedBox(height: 24),
+        SizedBox(height: verticalGap),
 
         // ── Step label ──
         Center(
@@ -675,7 +703,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 16),
+        SizedBox(height: isCompact ? 10.0 : 16.0),
 
         // ── Title ──
         Center(
@@ -683,7 +711,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             step.title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: isMobile ? 22 : 20,
+              fontSize: titleSize,
               fontWeight: FontWeight.w700,
               color: cs.onSurface,
               letterSpacing: -0.5,
@@ -692,7 +720,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: isCompact ? 8.0 : 12.0),
 
         // ── Description ──
         Center(
@@ -702,15 +730,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               step.description,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: isCompact ? 12 : 13,
                 color: cs.onSurface.withAlpha(140),
-                height: 1.6,
+                height: 1.5,
               ),
             ),
           ),
         ),
 
-        const SizedBox(height: 28),
+        SizedBox(height: isCompact ? 16.0 : 28.0),
 
         // ── Feature list card ──
         Container(
@@ -722,16 +750,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             border: Border.all(color: cs.onSurface.withAlpha(isDark ? 12 : 20)),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: step.features.asMap().entries.map((entry) {
               final idx = entry.key;
               final feature = entry.value;
               final isLast = idx == step.features.length - 1;
 
               return Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: isCompact ? 10 : 14,
+                    ),
                     child: Row(
                       children: [
                         Container(
