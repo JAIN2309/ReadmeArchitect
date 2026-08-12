@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:991575419889:web:1ba46b40772256d8ee3250',
     messagingSenderId: '991575419889',
     projectId: 'readmearchitect',
-    authDomain: 'readmearchitect.firebaseapp.com',
+    authDomain: 'ReadmeArchitect',
     storageBucket: 'readmearchitect.firebasestorage.app',
     measurementId: 'G-9T8W7HZFEW',
   );
