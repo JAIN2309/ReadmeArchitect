@@ -84,22 +84,28 @@ class _ProfileDialogState extends State<ProfileDialog>
 
   Future<void> _confirmSignOut() async {
     final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final confirm = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withAlpha(180),
+      barrierColor: Colors.black.withAlpha(isDark ? 180 : 120),
       builder: (context) => AlertDialog(
-        backgroundColor: cs.surface,
+        backgroundColor: isDark ? cs.surface : Colors.white,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: cs.onSurface.withAlpha(15)),
+          side: BorderSide(
+            color: isDark
+                ? cs.onSurface.withAlpha(15)
+                : Colors.grey.withAlpha(40),
+          ),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withAlpha(15),
+                color: const Color(0xFFEF4444).withAlpha(isDark ? 20 : 15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
@@ -114,7 +120,7 @@ class _ProfileDialogState extends State<ProfileDialog>
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: cs.onSurface,
+                color: isDark ? cs.onSurface : Colors.grey.shade900,
               ),
             ),
           ],
@@ -123,26 +129,35 @@ class _ProfileDialogState extends State<ProfileDialog>
           'Are you sure you want to sign out? Your generated README history will remain safely stored in your Cloud account.',
           style: TextStyle(
             fontSize: 13,
-            color: cs.onSurface.withAlpha(160),
-            height: 1.4,
+            color: isDark
+                ? cs.onSurface.withAlpha(160)
+                : Colors.grey.shade600,
+            height: 1.5,
           ),
         ),
-        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 4, 20, 18),
         actions: [
           OutlinedButton(
             onPressed: () => Navigator.pop(context, false),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: cs.onSurface.withAlpha(20)),
+              side: BorderSide(
+                color: isDark
+                    ? cs.onSurface.withAlpha(25)
+                    : Colors.grey.withAlpha(60),
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             ),
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: cs.onSurface.withAlpha(180),
+                color: isDark
+                    ? cs.onSurface.withAlpha(180)
+                    : Colors.grey.shade700,
                 fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
