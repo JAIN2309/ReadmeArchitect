@@ -102,7 +102,10 @@ class _AuthDialogState extends State<AuthDialog>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '').replaceAll('[firebase_auth/', '').replaceAll(']', '');
+          _error = e
+              .toString()
+              .replaceAll('Exception: ', '')
+              .replaceAll(RegExp(r'\[firebase_auth/[^\]]*\]\s*'), '');
           _isLoading = false;
           _activeButton = null;
         });
@@ -122,13 +125,29 @@ class _AuthDialogState extends State<AuthDialog>
       widget.onAuthSuccess?.call();
       Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+      final msg = e.toString().toLowerCase();
+      // User dismissed the popup — not an error, just reset silently
+      if (msg.contains('popup-closed-by-user') ||
+          msg.contains('cancelled') ||
+          msg.contains('canceled') ||
+          msg.contains('popup_closed') ||
+          msg.contains('user-cancelled') ||
+          msg.contains('network-request-failed')) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
           _isLoading = false;
           _activeButton = null;
         });
+        return;
       }
+      setState(() {
+        _error = e
+            .toString()
+            .replaceAll('Exception: ', '')
+            .replaceAll(RegExp(r'\[firebase_auth/[^\]]*\]\s*'), '');
+        _isLoading = false;
+        _activeButton = null;
+      });
     }
   }
 
